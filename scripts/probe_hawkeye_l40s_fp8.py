@@ -233,10 +233,17 @@ def _gfloat_to_float32(
         exponent_bits - 1,
         exponent_bits,
     )
+    exponent_bits = exponent_bits.clamp(0, 254)
+    mantissa = significand.to(torch.int64) & 0x7FFFFF
     bits = (
         (sign.to(torch.int64) << 31)
-        | ((exponent_bits.to(torch.int64) & 0xFF) << 23)
-        | (significand.to(torch.int64) & 0x7FFFFF)
+        | (exponent_bits.to(torch.int64) << 23)
+        | mantissa
+    )
+    bits = torch.where(
+        significand != 0,
+        bits,
+        torch.zeros_like(bits),
     )
     return bits.to(torch.int32).view(torch.float32)
 

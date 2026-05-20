@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,11 +27,25 @@ import triton
 import triton.language as tl
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+from int_model_approximation.hawkeye_freivalds import exact_hawkeye_fp8_sum
 from int_model_approximation.metrics import logit_l2, post_gumbel_margin, top1_match, topk_overlap
 
 
 MODEL_ID = "RedHatAI/Qwen2.5-0.5B-FP8-dynamic"
 OUTPUT_PATH = Path("results/difr_layer_errors.json")
+TEACHER_KERNEL = os.environ.get("IMA_TEACHER_KERNEL", "fp8_scaled_mm")
+HOPPER_QGMMA_TEACHER_KERNELS = {"hopper_qgmma", "hawkeye_qgmma"}
+STUDENT_KERNEL = os.environ.get("IMA_STUDENT_KERNEL", "int32_blend")
+HAWKEYE_PRODUCTS_PER_GROUP = int(os.environ.get("IMA_HAWKEYE_GROUP", "32"))
+HAWKEYE_INTERNAL_WIDTH = int(os.environ.get("IMA_HAWKEYE_WIDTH", "14"))
+HAWKEYE_CLASS_CHUNK = int(os.environ.get("IMA_HAWKEYE_CLASS_CHUNK", "32"))
+HAWKEYE_PACKED_COUNT_LANES = int(os.environ.get("IMA_HAWKEYE_PACKED_COUNT_LANES", "1"))
+HAWKEYE_FUSED_REPLAY = os.environ.get("IMA_HAWKEYE_FUSED_REPLAY", "0") == "1"
+HAWKEYE_CACHE_WEIGHT_CHUNKS = os.environ.get("IMA_HAWKEYE_CACHE_WEIGHT_CHUNKS", "0") == "1"
+HAWKEYE_COUNT_MATMUL = os.environ.get("IMA_HAWKEYE_COUNT_MATMUL", "int64")
+HAWKEYE_ZERO_EXPONENT = -139
+INT8_COUNT_BLOCK_M = int(os.environ.get("IMA_INT8_COUNT_BLOCK_M", "16"))
+INT8_COUNT_BLOCK_N = int(os.environ.get("IMA_INT8_COUNT_BLOCK_N", "64"))
 PROMPT = (
     "Layer-wise error measurement matters because a quantized language model can "
     "preserve final-token behavior while still accumulating hidden-state drift. "
@@ -85,8 +100,8 @@ PROMPT = (
 
 FP8_E4M3_MAX = 448.0
 FP8_E4M3_CODE_SCALE = 512.0
-FP8_CODEBOOK_CORRECTION_NUMERATOR = 10
-FP8_CODEBOOK_CORRECTION_DENOMINATOR = 32
+FP8_CODEBOOK_CORRECTION_NUMERATOR = int(os.environ.get("IMA_CODEBOOK_NUM", "10"))
+FP8_CODEBOOK_CORRECTION_DENOMINATOR = int(os.environ.get("IMA_CODEBOOK_DEN", "32"))
 FP8_CODEBOOK_CORRECTION_ALPHA = (
     FP8_CODEBOOK_CORRECTION_NUMERATOR / FP8_CODEBOOK_CORRECTION_DENOMINATOR
 )
@@ -106,7 +121,7 @@ def _require_cuda_tensor(x: torch.Tensor, label: str) -> None:
 def _require_gpu() -> str:
     if not torch.cuda.is_available():
         raise SystemExit("A CUDA GPU is required; CPU execution is unsupported.")
-    if not hasattr(torch, "_scaled_mm"):
+    if TEACHER_KERNEL == "fp8_scaled_mm" and not hasattr(torch, "_scaled_mm"):
         raise SystemExit("torch._scaled_mm is unavailable; real FP8 GEMM cannot run.")
     major, minor = torch.cuda.get_device_capability(0)
     if (major, minor) < (8, 9):
@@ -214,6 +229,7 @@ def _int32_raw_matmul_kernel(
 
 
 def _int32_raw_matmul(activations: torch.Tensor, weight_t: torch.Tensor) -> torch.Tensor:
+    global _ACTIVE_INT32_PROBE
     _require_cuda_tensor(activations, "int32 activation matrix")
     _require_cuda_tensor(weight_t, "int32 weight matrix")
     if activations.dtype != torch.int32 or weight_t.dtype != torch.int32:
@@ -223,6 +239,8 @@ def _int32_raw_matmul(activations: torch.Tensor, weight_t: torch.Tensor) -> torc
     if k_size != k2:
         raise RuntimeError(f"int32 raw matmul shape mismatch: {activations.shape} @ {weight_t.shape}")
     out = torch.empty((m_size, n_size), device=activations.device, dtype=torch.int64)
+    if _ACTIVE_INT32_PROBE is not None:
+        _ACTIVE_INT32_PROBE.count += 1
     _int32_raw_matmul_kernel[(triton.cdiv(m_size, BLOCK_M), triton.cdiv(n_size, BLOCK_N))](
         activations,
         weight_t,
@@ -233,6 +251,144 @@ def _int32_raw_matmul(activations: torch.Tensor, weight_t: torch.Tensor) -> torc
         block_m=BLOCK_M,
         block_n=BLOCK_N,
         block_k=BLOCK_K,
+        num_warps=4,
+    )
+    return out
+
+
+@triton.jit
+def _int32_count_matmul_kernel(
+    a_ptr,
+    b_ptr,
+    out_ptr,
+    m_size: tl.constexpr,
+    n_size: tl.constexpr,
+    k_size: tl.constexpr,
+    block_m: tl.constexpr,
+    block_n: tl.constexpr,
+    block_k: tl.constexpr,
+):
+    pid_m = tl.program_id(0)
+    pid_n = tl.program_id(1)
+    offs_m = pid_m * block_m + tl.arange(0, block_m)
+    offs_n = pid_n * block_n + tl.arange(0, block_n)
+    accum = tl.zeros((block_m, block_n), dtype=tl.int32)
+
+    for k0 in range(0, k_size, block_k):
+        for kk in range(0, block_k):
+            k = k0 + kk
+            a = tl.load(
+                a_ptr + offs_m * k_size + k,
+                mask=(offs_m < m_size) & (k < k_size),
+                other=0,
+            )
+            b = tl.load(
+                b_ptr + k * n_size + offs_n,
+                mask=(k < k_size) & (offs_n < n_size),
+                other=0,
+            )
+            accum += a[:, None] * b[None, :]
+
+    tl.store(
+        out_ptr + offs_m[:, None] * n_size + offs_n[None, :],
+        accum,
+        mask=(offs_m[:, None] < m_size) & (offs_n[None, :] < n_size),
+    )
+
+
+def _int32_count_matmul(activations: torch.Tensor, weight_t: torch.Tensor) -> torch.Tensor:
+    global _ACTIVE_INT32_PROBE
+    _require_cuda_tensor(activations, "int32 count activation matrix")
+    _require_cuda_tensor(weight_t, "int32 count weight matrix")
+    if activations.dtype != torch.int32 or weight_t.dtype != torch.int32:
+        raise RuntimeError("int32 count matmul received non-int32 operands")
+    m_size, k_size = activations.shape
+    k2, n_size = weight_t.shape
+    if k_size != k2:
+        raise RuntimeError(f"int32 count matmul shape mismatch: {activations.shape} @ {weight_t.shape}")
+    out = torch.empty((m_size, n_size), device=activations.device, dtype=torch.int32)
+    if _ACTIVE_INT32_PROBE is not None:
+        _ACTIVE_INT32_PROBE.count += 1
+    _int32_count_matmul_kernel[(triton.cdiv(m_size, 16), triton.cdiv(n_size, 32))](
+        activations,
+        weight_t,
+        out,
+        m_size,
+        n_size,
+        k_size,
+        block_m=16,
+        block_n=32,
+        block_k=BLOCK_K,
+        num_warps=4,
+    )
+    return out
+
+
+@triton.jit
+def _int8_count_matmul_kernel(
+    a_ptr,
+    b_ptr,
+    out_ptr,
+    m_size: tl.constexpr,
+    n_size: tl.constexpr,
+    k_size: tl.constexpr,
+    block_m: tl.constexpr,
+    block_n: tl.constexpr,
+    block_k: tl.constexpr,
+):
+    pid_m = tl.program_id(0)
+    pid_n = tl.program_id(1)
+    offs_m = pid_m * block_m + tl.arange(0, block_m)
+    offs_n = pid_n * block_n + tl.arange(0, block_n)
+    offs_k = tl.arange(0, block_k)
+    accum = tl.zeros((block_m, block_n), dtype=tl.int32)
+
+    for k0 in range(0, k_size, block_k):
+        k = k0 + offs_k
+        a = tl.load(
+            a_ptr + offs_m[:, None] * k_size + k[None, :],
+            mask=(offs_m[:, None] < m_size) & (k[None, :] < k_size),
+            other=0,
+        )
+        b = tl.load(
+            b_ptr + k[:, None] * n_size + offs_n[None, :],
+            mask=(k[:, None] < k_size) & (offs_n[None, :] < n_size),
+            other=0,
+        )
+        accum += tl.dot(a, b, out_dtype=tl.int32)
+
+    tl.store(
+        out_ptr + offs_m[:, None] * n_size + offs_n[None, :],
+        accum,
+        mask=(offs_m[:, None] < m_size) & (offs_n[None, :] < n_size),
+    )
+
+
+def _int8_count_matmul(activations: torch.Tensor, weight_t: torch.Tensor) -> torch.Tensor:
+    global _ACTIVE_INT32_PROBE
+    _require_cuda_tensor(activations, "int8 count activation matrix")
+    _require_cuda_tensor(weight_t, "int8 count weight matrix")
+    if activations.dtype != torch.int8 or weight_t.dtype != torch.int8:
+        raise RuntimeError("int8 count matmul received non-int8 operands")
+    m_size, k_size = activations.shape
+    k2, n_size = weight_t.shape
+    if k_size != k2:
+        raise RuntimeError(f"int8 count matmul shape mismatch: {activations.shape} @ {weight_t.shape}")
+    out = torch.empty((m_size, n_size), device=activations.device, dtype=torch.int32)
+    if _ACTIVE_INT32_PROBE is not None:
+        _ACTIVE_INT32_PROBE.count += 1
+    _int8_count_matmul_kernel[
+        (triton.cdiv(m_size, INT8_COUNT_BLOCK_M), triton.cdiv(n_size, INT8_COUNT_BLOCK_N))
+    ](
+        activations,
+        weight_t,
+        out,
+        m_size,
+        n_size,
+        k_size,
+        block_m=INT8_COUNT_BLOCK_M,
+        block_n=INT8_COUNT_BLOCK_N,
+        block_k=32,
         num_warps=4,
     )
     return out
@@ -318,8 +474,24 @@ def _int32_matmul(
     return out
 
 
+def _hopper_qgmma_fp8_scaled_mm(
+    x_fp8: torch.Tensor,
+    x_scale: torch.Tensor,
+    w_fp8: torch.Tensor,
+    w_scale: torch.Tensor,
+) -> torch.Tensor:
+    try:
+        from scripts.hopper_qgmma_teacher import qgmma_fp8_scaled_mm
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "IMA_TEACHER_KERNEL=hopper_qgmma requires scripts/hopper_qgmma_teacher.py "
+            "from this repository checkout."
+        ) from exc
+    return qgmma_fp8_scaled_mm(x_fp8, x_scale, w_fp8, w_scale)
+
+
 class FP8Linear(nn.Module):
-    """Linear backed by real FP8 GEMM through torch._scaled_mm."""
+    """Linear backed by the selected FP8 teacher GEMM."""
 
     def __init__(self, weight: torch.Tensor, weight_scale: torch.Tensor, bias: torch.Tensor | None):
         super().__init__()
@@ -339,13 +511,18 @@ class FP8Linear(nn.Module):
         _require_cuda_tensor(x, "FP8 input")
         in_shape = x.shape
         x_fp8, x_scale = _per_token_fp8(x)
-        y = torch._scaled_mm(
-            x_fp8,
-            self.weight.t(),
-            scale_a=x_scale,
-            scale_b=self.weight_scale.reshape(1, -1),
-            out_dtype=torch.bfloat16,
-        )
+        if TEACHER_KERNEL == "fp8_scaled_mm":
+            y = torch._scaled_mm(
+                x_fp8,
+                self.weight.t(),
+                scale_a=x_scale,
+                scale_b=self.weight_scale.reshape(1, -1),
+                out_dtype=torch.bfloat16,
+            )
+        elif TEACHER_KERNEL in HOPPER_QGMMA_TEACHER_KERNELS:
+            y = _hopper_qgmma_fp8_scaled_mm(x_fp8, x_scale, self.weight, self.weight_scale)
+        else:
+            raise RuntimeError(f"unknown IMA_TEACHER_KERNEL={TEACHER_KERNEL!r}")
         if self.bias is not None:
             y = y + self.bias.to(y.dtype)
         return y.to(x.dtype).reshape(*in_shape[:-1], self.out_features)
@@ -403,9 +580,62 @@ class Int32Linear(nn.Module):
                 codebook_x_scale,
                 self.codebook_weight_scale,
             )
-            y = y + self.codebook_alpha * (y_codebook - y)
+            if self.codebook_alpha == 1.0:
+                y = y_codebook
+            else:
+                y = y + self.codebook_alpha * (y_codebook - y)
         if self.bias is not None:
             y = y + self.bias.to(torch.float32)
+        return y.to(x.dtype).reshape(*in_shape[:-1], self.out_features)
+
+
+class HawkeyeFreivaldsLinear(nn.Module):
+    """FP8 linear reconstructed from Freivalds-checkable Hawkeye bucket products."""
+
+    def __init__(self, weight: torch.Tensor, weight_scale: torch.Tensor, bias: torch.Tensor | None):
+        super().__init__()
+        if weight.dtype != torch.float8_e4m3fn:
+            raise RuntimeError(f"HawkeyeFreivaldsLinear needs FP8 weights, got {weight.dtype}")
+        _require_cuda_tensor(weight, "Hawkeye FP8 weight")
+        self.register_buffer("weight", weight.detach().contiguous(), persistent=False)
+        self.register_buffer("weight_scale", weight_scale.detach().to(torch.float32), persistent=False)
+        if bias is None:
+            self.bias = None
+        else:
+            self.register_buffer("bias", bias.detach(), persistent=False)
+        self.in_features = weight.shape[1]
+        self.out_features = weight.shape[0]
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        _require_cuda_tensor(x, "Hawkeye input")
+        in_shape = x.shape
+        x_fp8, x_scale = _per_token_fp8(x)
+        if HAWKEYE_PACKED_COUNT_LANES == 1 and HAWKEYE_COUNT_MATMUL == "int8":
+            raw_matmul = _int8_count_matmul
+            count_dtype = torch.int8
+        elif HAWKEYE_PACKED_COUNT_LANES == 1 and HAWKEYE_COUNT_MATMUL == "int32":
+            raw_matmul = _int32_count_matmul
+            count_dtype = torch.int32
+        else:
+            raw_matmul = _int32_raw_matmul
+            count_dtype = torch.int32
+        y, _stats = exact_hawkeye_fp8_sum(
+            x_fp8,
+            x_scale,
+            self.weight,
+            self.weight_scale,
+            raw_matmul,
+            products_per_group=HAWKEYE_PRODUCTS_PER_GROUP,
+            internal_width=HAWKEYE_INTERNAL_WIDTH,
+            zero_exponent=HAWKEYE_ZERO_EXPONENT,
+            class_chunk=HAWKEYE_CLASS_CHUNK,
+            packed_count_lanes=HAWKEYE_PACKED_COUNT_LANES,
+            fused_replay=HAWKEYE_FUSED_REPLAY,
+            cache_weight_chunks=HAWKEYE_CACHE_WEIGHT_CHUNKS,
+            count_dtype=count_dtype,
+        )
+        if self.bias is not None:
+            y = y + self.bias.to(y.dtype)
         return y.to(x.dtype).reshape(*in_shape[:-1], self.out_features)
 
 
@@ -452,7 +682,13 @@ def _replace_int32_linears(model: nn.Module) -> list[str]:
         if isinstance(module, nn.Linear):
             replacements.append((name, module))
     for name, module in replacements:
-        if module.weight.dtype == torch.float8_e4m3fn and hasattr(module, "weight_scale"):
+        if (
+            STUDENT_KERNEL in {"hawkeye_exact", "hawkeye_freivalds"}
+            and module.weight.dtype == torch.float8_e4m3fn
+            and hasattr(module, "weight_scale")
+        ):
+            replacement = HawkeyeFreivaldsLinear(module.weight, module.weight_scale, module.bias)
+        elif module.weight.dtype == torch.float8_e4m3fn and hasattr(module, "weight_scale"):
             replacement = Int32Linear(
                 _dequantized_weight(module),
                 module.bias,
@@ -609,11 +845,17 @@ def main() -> None:
     layer_name_set = set(layer_names)
 
     ref_captures, ref_handles = _install_hooks(reference, layer_name_set)
-    with torch.inference_mode(), _KernelProbe("_scaled_mm") as fp8_probe:
-        reference_output = reference(input_ids)
+    fp8_probe_count = 0
+    if TEACHER_KERNEL == "fp8_scaled_mm":
+        with torch.inference_mode(), _KernelProbe("_scaled_mm") as fp8_probe:
+            reference_output = reference(input_ids)
+        fp8_probe_count = fp8_probe.count
+        if fp8_probe_count == 0:
+            raise RuntimeError("Reference forward did not call torch._scaled_mm.")
+    else:
+        with torch.inference_mode():
+            reference_output = reference(input_ids)
     _remove_hooks(ref_handles)
-    if fp8_probe.count == 0:
-        raise RuntimeError("Reference forward did not call torch._scaled_mm.")
 
     int_captures, int_handles = _install_hooks(integerized, layer_name_set)
     with torch.inference_mode(), _Int32KernelProbe() as int_probe:
@@ -651,12 +893,16 @@ def main() -> None:
         "model": MODEL_ID,
         "prompt_tokens": int(input_ids.shape[1]),
         "device": torch.cuda.get_device_name(0),
-        "integerized_kernel": "triton_int32_x_int32_to_int64",
-        "integerized_correction": "10/32 * (fp8_codebook_int_product - high_precision_int_product)",
+        "integerized_kernel": STUDENT_KERNEL,
+        "teacher_kernel": TEACHER_KERNEL,
+        "integerized_correction": (
+            f"{FP8_CODEBOOK_CORRECTION_NUMERATOR}/{FP8_CODEBOOK_CORRECTION_DENOMINATOR} "
+            "* (fp8_codebook_int_product - high_precision_int_product)"
+        ),
         "integerized_qmax": "per-layer floor(sqrt((2^62 - 1) / in_features))",
         "runtime_s": time.time() - started,
         "kernel_calls": {
-            "reference_scaled_mm": fp8_probe.count,
+            "reference_scaled_mm": fp8_probe_count,
             "integerized_int32_kernel": int_probe.count,
             "isolated_int32_kernel": isolated_int32_kernel_calls,
         },
