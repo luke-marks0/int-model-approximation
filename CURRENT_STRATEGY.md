@@ -6,3 +6,13 @@ The repo supports two student paths:
 - `hawkeye`: FP8 checkpoint linears run direct Hawkeye integer replay of Hopper FP8 QGMMA accumulation. This can exactly match the Hopper FP8 teacher, but it is not cheaply Freivalds-checkable because it is not one matrix product.
 
 Non-FP8 linears use the baseline per-row/per-token int32 GEMM path in both modes.
+
+## Branch Notes
+
+- `try/grouped-codebook-accumulator` was pruned. It split each FP8 codebook
+  linear into Hawkeye-sized K=32 exact integer products and truncated the integer
+  accumulator after each group. The natural 14-bit setting was much worse than
+  `codebook` on the 128-token Hopper-teacher probe (top1 0.0234, top5 0.0750).
+  Wider truncation only became usable when it was effectively the original
+  codebook sum; the best sweep point kept top1 at 0.9141 with no meaningful top5
+  improvement while increasing FP8-linears checks from 168 to 7,680.
