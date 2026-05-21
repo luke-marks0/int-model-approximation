@@ -4,8 +4,7 @@ The repo supports three student paths:
 
 - `codebook`: FP8 checkpoint linears run one Freivalds-checkable integer GEMM over exact FP8-codebook values, then deterministically rescale the product. This is the default path.
 - `hawkeye`: FP8 checkpoint linears run direct Hawkeye integer replay of Hopper FP8 QGMMA accumulation. This can exactly match the Hopper FP8 teacher, but it is not cheaply Freivalds-checkable because it is not one matrix product.
-- `hawkeye-class-counts`: FP8 checkpoint linears run exact Hawkeye replay from Freivalds-checkable class-count products. With `IMA_HAWKEYE_CLASS_CHUNK=512` and `IMA_HAWKEYE_PACKED_COUNT_LANES=6`, each K=32 Hawkeye group is one count product, giving exact Hopper QGMMA logits on the FP8-linears-only probe at 7,680 checkable products per Qwen2.5-0.5B forward.
-- `try/packed-hawkeye-group-counts`: experimental extension of `hawkeye-class-counts` that keeps the exact K=32 Hawkeye replay boundary but packs multiple groups into one count product by spending packed base-64 lanes on group index. With `IMA_HAWKEYE_PACKED_GROUP_LANES=2`, the FP8-linear product count is 3,840 while preserving exact Hopper QGMMA logits on the 16-token FP8-only probe.
+- `hawkeye-class-counts`: FP8 checkpoint linears run exact Hawkeye replay from Freivalds-checkable class-count products. With `IMA_HAWKEYE_CLASS_CHUNK=512`, `IMA_HAWKEYE_PACKED_COUNT_LANES=6`, and `IMA_HAWKEYE_PACKED_GROUP_LANES=1`, each K=32 Hawkeye group is one count product, giving exact Hopper QGMMA logits on the FP8-linears-only probe at 7,680 checkable products per Qwen2.5-0.5B forward. Raising `IMA_HAWKEYE_PACKED_GROUP_LANES` packs several exact K=32 groups into one count product while preserving the K=32 replay boundary; the 2-group setting is exact at 3,840 products on the 16-token FP8-only probe.
 
 Non-FP8 linears use the baseline per-row/per-token int32 GEMM path in all modes.
 
@@ -81,15 +80,15 @@ Non-FP8 linears use the baseline per-row/per-token int32 GEMM path in all modes.
   setting. This suggests the exact transition boundary is the K=32 WGMMA
   instruction; larger groups cannot be obtained by only changing Hawkeye's
   max-exponent and normalization span.
-- `try/packed-hawkeye-group-counts` was kept as a lower-product exact Hawkeye
-  construction. It packs count products across several exact K=32 groups rather
-  than making a larger approximate Hawkeye group. Tile tests are exact for 2, 3,
-  and 6 packed group lanes. On the Qwen2.5-0.5B 16-token FP8-linears-only
-  Hopper probe, the 2-group setting is exact (top1/top5 1.0000/1.0000, logit L2
-  0.0) and reduces checkable FP8-linear products from 7,680 to 3,840. The
-  3-group setting was exact on a 1-token probe with 2,664 products. The 6-group
-  tile prototype is exact, but the full model with class chunk 512 exceeds the
-  current Triton raw-matmul grid limit because only one lane remains for weight
-  classes. The main drawback is prover/runtime cost: wider products and
-  materialized packed counts made the current evaluator slower than the
-  existing one-group class-count path.
+- `try/packed-hawkeye-group-counts` was merged into the existing
+  `hawkeye-class-counts` path and then pruned. It packs count products across
+  several exact K=32 groups rather than making a larger approximate Hawkeye
+  group. Tile tests are exact for 2, 3, and 6 packed group lanes. On the
+  Qwen2.5-0.5B 16-token FP8-linears-only Hopper probe, the 2-group setting is
+  exact (top1/top5 1.0000/1.0000, logit L2 0.0) and reduces checkable FP8-linear
+  products from 7,680 to 3,840. The 3-group setting was exact on a 1-token probe
+  with 2,664 products. The 6-group tile prototype is exact, but the full model
+  with class chunk 512 exceeds the current Triton raw-matmul grid limit because
+  only one lane remains for weight classes. The main drawback is prover/runtime
+  cost: wider products and materialized packed counts made the current evaluator
+  slower than the existing one-group class-count path.

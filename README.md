@@ -54,20 +54,17 @@ Choose the student with `IMA_STUDENT_KERNEL`:
   and `IMA_HAWKEYE_PACKED_COUNT_LANES=6`, each K=32 Hawkeye group becomes one
   checkable count product. On Qwen2.5-0.5B this is 7,680 checkable FP8-linear
   products per forward, versus 168 for `codebook`; accuracy is exact against the
-  Hopper QGMMA teacher on the FP8-linears-only probe.
-
-- `try/packed-hawkeye-group-counts`: experimental extension of
-  `hawkeye-class-counts` that packs several exact K=32 groups into one count
-  product. It does not change Hawkeye's accumulator boundary; deterministic
-  replay still normalizes after every K=32 QGMMA step. Instead, it spends some
-  base-64 packed count lanes on the group index and the rest on weight classes,
-  then decodes each group during replay. With
-  `IMA_HAWKEYE_PACKED_GROUP_LANES=2`, Qwen2.5-0.5B drops from 7,680 to 3,840
-  checkable FP8-linear products while remaining exact on the 16-token
+  Hopper QGMMA teacher on the FP8-linears-only probe. Setting
+  `IMA_HAWKEYE_PACKED_GROUP_LANES` above 1 packs several exact K=32 groups into
+  one count product. This does not change Hawkeye's accumulator boundary:
+  deterministic replay still normalizes after every K=32 QGMMA step. It only
+  spends base-64 packed count lanes on the group index, reducing the number of
+  Freivalds-checkable products. With `IMA_HAWKEYE_PACKED_GROUP_LANES=2`, the
+  count falls to 3,840 products while remaining exact on the 16-token
   FP8-linears-only Hopper probe. The current evaluator is slower because each
   product is wider and packed count outputs are materialized for sequential
-  replay; this is a verifier product-count improvement, not yet a
-  prover/runtime improvement.
+  replay; this is a verifier product-count improvement, not yet a prover/runtime
+  improvement.
 
 In short, `codebook` gives cheap checking with high teacher error, `hawkeye`
 gives perfect teacher reconstruction without cheap checking, and
