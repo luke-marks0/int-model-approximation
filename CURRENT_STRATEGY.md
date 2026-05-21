@@ -71,3 +71,12 @@ Non-FP8 linears use the baseline per-row/per-token int32 GEMM path in all modes.
   2048-token Hopper FP8-only probe: codebook top1/top5 0.9341/0.9342 moved to
   0.9463/0.9361; mean logit L2 fell from 93.70 to 90.00. Check cost is 240 exact
   integer products, 1.43x codebook and far below class-counts.
+- `try/larger-hawkeye-groups` was pruned. Direct Hawkeye replay with
+  `products_per_group=32` exactly matched the Hopper QGMMA teacher for K=64,
+  96, 128, and 256 across several random seeds. Collapsing those same K ranges
+  into one larger Hawkeye group did not match: K=64 with group 64 already
+  differed in roughly 100-120 of 8,192 bf16 outputs per seed, and width sweeps
+  from 10 through 28 bits still chose the existing width 14 as the least-bad
+  setting. This suggests the exact transition boundary is the K=32 WGMMA
+  instruction; larger groups cannot be obtained by only changing Hawkeye's
+  max-exponent and normalization span.
