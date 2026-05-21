@@ -80,3 +80,15 @@ Non-FP8 linears use the baseline per-row/per-token int32 GEMM path in all modes.
   setting. This suggests the exact transition boundary is the K=32 WGMMA
   instruction; larger groups cannot be obtained by only changing Hawkeye's
   max-exponent and normalization span.
+- `try/packed-hawkeye-group-counts` was kept as a lower-product exact Hawkeye
+  construction. It packs count products across several exact K=32 groups rather
+  than making a larger approximate Hawkeye group. Tile tests are exact for 2, 3,
+  and 6 packed group lanes. On the Qwen2.5-0.5B 16-token FP8-linears-only
+  Hopper probe, the 2-group setting is exact (top1/top5 1.0000/1.0000, logit L2
+  0.0) and reduces checkable FP8-linear products from 7,680 to 3,840. The
+  3-group setting was exact on a 1-token probe with 2,664 products. The 6-group
+  tile prototype is exact, but the full model with class chunk 512 exceeds the
+  current Triton raw-matmul grid limit because only one lane remains for weight
+  classes. The main drawback is prover/runtime cost: wider products and
+  materialized packed counts made the current evaluator slower than the
+  existing one-group class-count path.
