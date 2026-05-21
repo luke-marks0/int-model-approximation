@@ -59,9 +59,15 @@ Non-FP8 linears use the baseline per-row/per-token int32 GEMM path in all modes.
   packed class-count replay hit a CUDA illegal-memory fault at 128 tokens, and
   the unpacked fallback was both expensive and worse: 15,059 products, top1
   0.9063 on the 128-token Hopper FP8-only probe.
-- `try/codebook-dequant-blend` was kept as the best low-cost gain found so far.
+- `try/codebook-dequant-blend` was pruned after being superseded by
+  `try/family-dequant-blend`. The all-FP8-linear blend did improve the 11-row,
+  2048-token Hopper FP8-only probe from codebook top1/top5 0.9341/0.9342 to
+  0.9429/0.9377 at blend 0.05, but the family split below reached higher top1
+  at lower check cost.
+- `try/family-dequant-blend` was kept as the best low-cost gain found so far.
   It blends the normal codebook product with one dequantized-weight int32
-  product per FP8 linear. On an 11-row, 2048-token Hopper FP8-only probe,
-  codebook top1/top5 0.9341/0.9342 moved to 0.9429/0.9377 at blend 0.05; mean
-  logit L2 fell from 93.70 to 91.22 and p99 from 211.21 to 196.88. Check cost
-  is 336 exact integer products, 2x codebook and far below class-counts.
+  product only for MLP FP8 linears. Attention correction was harmful in the
+  128-token sweep, while MLP-only blend 0.10 validated on the 11-row,
+  2048-token Hopper FP8-only probe: codebook top1/top5 0.9341/0.9342 moved to
+  0.9463/0.9361; mean logit L2 fell from 93.70 to 90.00. Check cost is 240 exact
+  integer products, 1.43x codebook and far below class-counts.
