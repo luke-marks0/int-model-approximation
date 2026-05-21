@@ -85,6 +85,8 @@ def _replace_student_fp8_linears_only(model: torch.nn.Module) -> list[str]:
     for name, module in replacements:
         if entry.STUDENT_KERNEL == "hawkeye":
             replacement = entry.HawkeyeLinear(module.weight, module.weight_scale, module.bias)
+        elif entry.STUDENT_KERNEL == "hawkeye_exact":
+            replacement = entry.HawkeyeExactLinear(module.weight, module.weight_scale, module.bias)
         elif entry.STUDENT_KERNEL == "codebook":
             replacement = entry.CodebookLinear(module.weight, module.weight_scale, module.bias)
         else:
@@ -161,6 +163,12 @@ def main() -> None:
     parser.add_argument("--max-tokens", type=int, default=16)
     parser.add_argument("--hawkeye-group", type=int, default=entry.HAWKEYE_PRODUCTS_PER_GROUP)
     parser.add_argument("--hawkeye-width", type=int, default=entry.HAWKEYE_INTERNAL_WIDTH)
+    parser.add_argument("--hawkeye-class-chunk", type=int, default=entry.HAWKEYE_CLASS_CHUNK)
+    parser.add_argument(
+        "--hawkeye-packed-count-lanes",
+        type=int,
+        default=entry.HAWKEYE_PACKED_COUNT_LANES,
+    )
     parser.add_argument("--hawkeye-block-m", type=int, default=entry.HAWKEYE_BLOCK_M)
     parser.add_argument("--hawkeye-block-n", type=int, default=entry.HAWKEYE_BLOCK_N)
     parser.add_argument("--student-fp8-only", action="store_true")
@@ -173,6 +181,8 @@ def main() -> None:
     torch.manual_seed(0)
     entry.HAWKEYE_PRODUCTS_PER_GROUP = args.hawkeye_group
     entry.HAWKEYE_INTERNAL_WIDTH = args.hawkeye_width
+    entry.HAWKEYE_CLASS_CHUNK = args.hawkeye_class_chunk
+    entry.HAWKEYE_PACKED_COUNT_LANES = args.hawkeye_packed_count_lanes
     entry.HAWKEYE_BLOCK_M = args.hawkeye_block_m
     entry.HAWKEYE_BLOCK_N = args.hawkeye_block_n
 
@@ -238,6 +248,8 @@ def main() -> None:
         "hawkeye": {
             "products_per_group": args.hawkeye_group,
             "internal_width": args.hawkeye_width,
+            "class_chunk": args.hawkeye_class_chunk,
+            "packed_count_lanes": args.hawkeye_packed_count_lanes,
             "block_m": args.hawkeye_block_m,
             "block_n": args.hawkeye_block_n,
         },

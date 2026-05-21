@@ -14,6 +14,9 @@ Freivalds proof shape, but has high error against the genuine FP8 teacher. The
 `hawkeye` path is a perfect recreation of the Hopper FP8 teacher, but is not
 cheaply checkable. The research target is to unify the benefits of both ideas:
 the low error of Hawkeye with the cheap checkability of a single integer product.
+The current experimental `hawkeye_exact` path sits between those endpoints: it
+reconstructs Hawkeye exactly from Freivalds-checkable class-count products, but
+still needs many products per model forward.
 
 The supported run loads `RedHatAI/Qwen2.5-0.5B-FP8-dynamic`, executes a real FP8
 reference forward, builds an integerized copy, and writes layer and logit error
@@ -42,10 +45,21 @@ Choose the student with `IMA_STUDENT_KERNEL`:
   per-group max-exponent alignment, signed shifts, normalization, and bf16
   conversion logic.
 
-In short, `codebook` gives cheap checking with high teacher error, and `hawkeye`
-gives perfect teacher reconstruction without cheap checking. The intended next
-step is not to pick one permanently, but to find an integer construction that
-combines their strengths.
+- `hawkeye_exact`: FP8 checkpoint linears are reconstructed from exact
+  class-count products for each Hawkeye K=32 group. For a group, the activation
+  and weight FP8 values are bucketed by exponent/significand class; one integer
+  product computes all counts for a chunk of activation classes against packed
+  weight classes, and deterministic replay converts those counts back into the
+  same aligned integer accumulation Hawkeye uses. With `IMA_HAWKEYE_CLASS_CHUNK=512`
+  and `IMA_HAWKEYE_PACKED_COUNT_LANES=6`, each K=32 Hawkeye group becomes one
+  checkable count product. On Qwen2.5-0.5B this is 7,680 checkable FP8-linear
+  products per forward, versus 168 for `codebook`; accuracy is exact against the
+  Hopper QGMMA teacher on the FP8-linears-only probe.
+
+In short, `codebook` gives cheap checking with high teacher error, `hawkeye`
+gives perfect teacher reconstruction without cheap checking, and `hawkeye_exact`
+gives perfect teacher reconstruction with checkable products that are still too
+numerous to be the final cheap path.
 
 ## Development target
 
@@ -106,6 +120,14 @@ To run the Hawkeye student against the Hopper QGMMA teacher:
 
 ```bash
 IMA_TEACHER_KERNEL=hopper_qgmma IMA_STUDENT_KERNEL=hawkeye \
+  uv run python -m int_model_approximation
+```
+
+To run the exact class-count reconstruction:
+
+```bash
+IMA_TEACHER_KERNEL=hopper_qgmma IMA_STUDENT_KERNEL=hawkeye_exact \
+  IMA_HAWKEYE_CLASS_CHUNK=512 IMA_HAWKEYE_PACKED_COUNT_LANES=6 \
   uv run python -m int_model_approximation
 ```
 

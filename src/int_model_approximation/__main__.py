@@ -9,6 +9,7 @@ model against an integerized copy using real GPU kernels only:
 * reference linears with FP8 weights run through torch._scaled_mm
 * codebook student linears run through a Triton int32 x int32 -> int64 CUDA kernel
 * hawkeye student linears replay the Hopper FP8 accumulator with integer logic
+* hawkeye_exact student linears replay Hawkeye from checkable class-count products
 * no CPU fallback is allowed
 """
 
@@ -29,6 +30,7 @@ import triton.language as tl
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from int_model_approximation.hawkeye import hawkeye_fp8_sum
+from int_model_approximation.hawkeye_freivalds import exact_hawkeye_fp8_sum
 from int_model_approximation.metrics import logit_l2, post_gumbel_margin, top1_match, topk_overlap
 
 
@@ -37,9 +39,11 @@ OUTPUT_PATH = Path("results/difr_layer_errors.json")
 TEACHER_KERNEL = os.environ.get("IMA_TEACHER_KERNEL", "fp8_scaled_mm")
 HOPPER_QGMMA_TEACHER_KERNELS = {"hopper_qgmma", "hawkeye_qgmma"}
 STUDENT_KERNEL = os.environ.get("IMA_STUDENT_KERNEL", "codebook")
-SUPPORTED_STUDENT_KERNELS = {"codebook", "hawkeye"}
+SUPPORTED_STUDENT_KERNELS = {"codebook", "hawkeye", "hawkeye_exact"}
 HAWKEYE_PRODUCTS_PER_GROUP = int(os.environ.get("IMA_HAWKEYE_GROUP", "32"))
 HAWKEYE_INTERNAL_WIDTH = int(os.environ.get("IMA_HAWKEYE_WIDTH", "14"))
+HAWKEYE_CLASS_CHUNK = int(os.environ.get("IMA_HAWKEYE_CLASS_CHUNK", "32"))
+HAWKEYE_PACKED_COUNT_LANES = int(os.environ.get("IMA_HAWKEYE_PACKED_COUNT_LANES", "6"))
 HAWKEYE_ZERO_EXPONENT = -139
 HAWKEYE_BLOCK_M = int(os.environ.get("IMA_HAWKEYE_BLOCK_M", "4"))
 HAWKEYE_BLOCK_N = int(os.environ.get("IMA_HAWKEYE_BLOCK_N", "32"))
@@ -479,6 +483,44 @@ class HawkeyeLinear(nn.Module):
         return y.to(x.dtype).reshape(*in_shape[:-1], self.out_features)
 
 
+class HawkeyeExactLinear(nn.Module):
+    """FP8 linear reconstructed exactly from checkable Hawkeye class-count products."""
+
+    def __init__(self, weight: torch.Tensor, weight_scale: torch.Tensor, bias: torch.Tensor | None):
+        super().__init__()
+        if weight.dtype != torch.float8_e4m3fn:
+            raise RuntimeError(f"HawkeyeExactLinear needs FP8 weights, got {weight.dtype}")
+        _require_cuda_tensor(weight, "Hawkeye exact FP8 weight")
+        self.register_buffer("weight", weight.detach().contiguous(), persistent=False)
+        self.register_buffer("weight_scale", weight_scale.detach().to(torch.float32), persistent=False)
+        if bias is None:
+            self.bias = None
+        else:
+            self.register_buffer("bias", bias.detach(), persistent=False)
+        self.in_features = weight.shape[1]
+        self.out_features = weight.shape[0]
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        _require_cuda_tensor(x, "Hawkeye exact input")
+        in_shape = x.shape
+        x_fp8, x_scale = _per_token_fp8(x)
+        y, _stats = exact_hawkeye_fp8_sum(
+            x_fp8,
+            x_scale,
+            self.weight,
+            self.weight_scale,
+            _int32_raw_matmul,
+            products_per_group=HAWKEYE_PRODUCTS_PER_GROUP,
+            internal_width=HAWKEYE_INTERNAL_WIDTH,
+            zero_exponent=HAWKEYE_ZERO_EXPONENT,
+            class_chunk=HAWKEYE_CLASS_CHUNK,
+            packed_count_lanes=HAWKEYE_PACKED_COUNT_LANES,
+        )
+        if self.bias is not None:
+            y = y + self.bias.to(y.dtype)
+        return y.to(x.dtype).reshape(*in_shape[:-1], self.out_features)
+
+
 def _expanded_block_scale(weight: torch.Tensor, scale: torch.Tensor) -> torch.Tensor:
     if scale.shape == weight.shape:
         return scale
@@ -528,6 +570,8 @@ def _replace_int32_linears(model: nn.Module) -> list[str]:
         if module.weight.dtype == torch.float8_e4m3fn and hasattr(module, "weight_scale"):
             if STUDENT_KERNEL == "hawkeye":
                 replacement = HawkeyeLinear(module.weight, module.weight_scale, module.bias)
+            elif STUDENT_KERNEL == "hawkeye_exact":
+                replacement = HawkeyeExactLinear(module.weight, module.weight_scale, module.bias)
             else:
                 replacement = CodebookLinear(module.weight, module.weight_scale, module.bias)
         else:
@@ -696,7 +740,7 @@ def main() -> None:
     with torch.inference_mode(), _Int32KernelProbe() as int_probe:
         integerized_output = integerized(input_ids)
     _remove_hooks(int_handles)
-    if STUDENT_KERNEL == "codebook" and int_probe.count == 0:
+    if STUDENT_KERNEL in {"codebook", "hawkeye_exact"} and int_probe.count == 0:
         raise RuntimeError("Integerized forward did not launch the int32 CUDA kernel.")
 
     rows = []
@@ -731,9 +775,23 @@ def main() -> None:
         "integerized_kernel": STUDENT_KERNEL,
         "teacher_kernel": TEACHER_KERNEL,
         "integerized_path": (
-            "single FP8-codebook integer GEMM"
-            if STUDENT_KERNEL == "codebook"
-            else "direct Hawkeye FP8 accumulator replay"
+            {
+                "codebook": "single FP8-codebook integer GEMM",
+                "hawkeye": "direct Hawkeye FP8 accumulator replay",
+                "hawkeye_exact": (
+                    "exact Hawkeye replay from Freivalds-checkable class-count products"
+                ),
+            }[STUDENT_KERNEL]
+        ),
+        "hawkeye_exact": (
+            {
+                "class_chunk": HAWKEYE_CLASS_CHUNK,
+                "packed_count_lanes": HAWKEYE_PACKED_COUNT_LANES,
+                "products_per_group": HAWKEYE_PRODUCTS_PER_GROUP,
+                "internal_width": HAWKEYE_INTERNAL_WIDTH,
+            }
+            if STUDENT_KERNEL == "hawkeye_exact"
+            else None
         ),
         "integerized_qmax": "per-layer floor(sqrt((2^62 - 1) / in_features))",
         "runtime_s": time.time() - started,
