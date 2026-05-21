@@ -85,8 +85,12 @@ def _replace_student_fp8_linears_only(model: torch.nn.Module) -> list[str]:
     for name, module in replacements:
         if entry.STUDENT_KERNEL == "hawkeye":
             replacement = entry.HawkeyeLinear(module.weight, module.weight_scale, module.bias)
-        elif entry.STUDENT_KERNEL == "hawkeye_exact":
-            replacement = entry.HawkeyeExactLinear(module.weight, module.weight_scale, module.bias)
+        elif entry.STUDENT_KERNEL == "hawkeye-class-counts":
+            replacement = entry.HawkeyeClassCountsLinear(
+                module.weight,
+                module.weight_scale,
+                module.bias,
+            )
         elif entry.STUDENT_KERNEL == "codebook":
             replacement = entry.CodebookLinear(module.weight, module.weight_scale, module.bias)
         else:

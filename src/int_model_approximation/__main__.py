@@ -9,7 +9,7 @@ model against an integerized copy using real GPU kernels only:
 * reference linears with FP8 weights run through torch._scaled_mm
 * codebook student linears run through a Triton int32 x int32 -> int64 CUDA kernel
 * hawkeye student linears replay the Hopper FP8 accumulator with integer logic
-* hawkeye_exact student linears replay Hawkeye from checkable class-count products
+* hawkeye-class-counts student linears replay Hawkeye from checkable class-count products
 * no CPU fallback is allowed
 """
 
@@ -39,7 +39,7 @@ OUTPUT_PATH = Path("results/difr_layer_errors.json")
 TEACHER_KERNEL = os.environ.get("IMA_TEACHER_KERNEL", "fp8_scaled_mm")
 HOPPER_QGMMA_TEACHER_KERNELS = {"hopper_qgmma", "hawkeye_qgmma"}
 STUDENT_KERNEL = os.environ.get("IMA_STUDENT_KERNEL", "codebook")
-SUPPORTED_STUDENT_KERNELS = {"codebook", "hawkeye", "hawkeye_exact"}
+SUPPORTED_STUDENT_KERNELS = {"codebook", "hawkeye", "hawkeye-class-counts"}
 HAWKEYE_PRODUCTS_PER_GROUP = int(os.environ.get("IMA_HAWKEYE_GROUP", "32"))
 HAWKEYE_INTERNAL_WIDTH = int(os.environ.get("IMA_HAWKEYE_WIDTH", "14"))
 HAWKEYE_CLASS_CHUNK = int(os.environ.get("IMA_HAWKEYE_CLASS_CHUNK", "32"))
@@ -483,13 +483,13 @@ class HawkeyeLinear(nn.Module):
         return y.to(x.dtype).reshape(*in_shape[:-1], self.out_features)
 
 
-class HawkeyeExactLinear(nn.Module):
+class HawkeyeClassCountsLinear(nn.Module):
     """FP8 linear reconstructed exactly from checkable Hawkeye class-count products."""
 
     def __init__(self, weight: torch.Tensor, weight_scale: torch.Tensor, bias: torch.Tensor | None):
         super().__init__()
         if weight.dtype != torch.float8_e4m3fn:
-            raise RuntimeError(f"HawkeyeExactLinear needs FP8 weights, got {weight.dtype}")
+            raise RuntimeError(f"HawkeyeClassCountsLinear needs FP8 weights, got {weight.dtype}")
         _require_cuda_tensor(weight, "Hawkeye exact FP8 weight")
         self.register_buffer("weight", weight.detach().contiguous(), persistent=False)
         self.register_buffer("weight_scale", weight_scale.detach().to(torch.float32), persistent=False)
@@ -570,8 +570,12 @@ def _replace_int32_linears(model: nn.Module) -> list[str]:
         if module.weight.dtype == torch.float8_e4m3fn and hasattr(module, "weight_scale"):
             if STUDENT_KERNEL == "hawkeye":
                 replacement = HawkeyeLinear(module.weight, module.weight_scale, module.bias)
-            elif STUDENT_KERNEL == "hawkeye_exact":
-                replacement = HawkeyeExactLinear(module.weight, module.weight_scale, module.bias)
+            elif STUDENT_KERNEL == "hawkeye-class-counts":
+                replacement = HawkeyeClassCountsLinear(
+                    module.weight,
+                    module.weight_scale,
+                    module.bias,
+                )
             else:
                 replacement = CodebookLinear(module.weight, module.weight_scale, module.bias)
         else:
@@ -740,7 +744,7 @@ def main() -> None:
     with torch.inference_mode(), _Int32KernelProbe() as int_probe:
         integerized_output = integerized(input_ids)
     _remove_hooks(int_handles)
-    if STUDENT_KERNEL in {"codebook", "hawkeye_exact"} and int_probe.count == 0:
+    if STUDENT_KERNEL in {"codebook", "hawkeye-class-counts"} and int_probe.count == 0:
         raise RuntimeError("Integerized forward did not launch the int32 CUDA kernel.")
 
     rows = []
@@ -778,19 +782,19 @@ def main() -> None:
             {
                 "codebook": "single FP8-codebook integer GEMM",
                 "hawkeye": "direct Hawkeye FP8 accumulator replay",
-                "hawkeye_exact": (
+                "hawkeye-class-counts": (
                     "exact Hawkeye replay from Freivalds-checkable class-count products"
                 ),
             }[STUDENT_KERNEL]
         ),
-        "hawkeye_exact": (
+        "hawkeye_class_counts": (
             {
                 "class_chunk": HAWKEYE_CLASS_CHUNK,
                 "packed_count_lanes": HAWKEYE_PACKED_COUNT_LANES,
                 "products_per_group": HAWKEYE_PRODUCTS_PER_GROUP,
                 "internal_width": HAWKEYE_INTERNAL_WIDTH,
             }
-            if STUDENT_KERNEL == "hawkeye_exact"
+            if STUDENT_KERNEL == "hawkeye-class-counts"
             else None
         ),
         "integerized_qmax": "per-layer floor(sqrt((2^62 - 1) / in_features))",

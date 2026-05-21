@@ -4,7 +4,7 @@ The repo supports three student paths:
 
 - `codebook`: FP8 checkpoint linears run one Freivalds-checkable integer GEMM over exact FP8-codebook values, then deterministically rescale the product. This is the default path.
 - `hawkeye`: FP8 checkpoint linears run direct Hawkeye integer replay of Hopper FP8 QGMMA accumulation. This can exactly match the Hopper FP8 teacher, but it is not cheaply Freivalds-checkable because it is not one matrix product.
-- `hawkeye_exact`: FP8 checkpoint linears run exact Hawkeye replay from Freivalds-checkable class-count products. With `IMA_HAWKEYE_CLASS_CHUNK=512` and `IMA_HAWKEYE_PACKED_COUNT_LANES=6`, each K=32 Hawkeye group is one count product, giving exact Hopper QGMMA logits on the FP8-linears-only probe at 7,680 checkable products per Qwen2.5-0.5B forward.
+- `hawkeye-class-counts`: FP8 checkpoint linears run exact Hawkeye replay from Freivalds-checkable class-count products. With `IMA_HAWKEYE_CLASS_CHUNK=512` and `IMA_HAWKEYE_PACKED_COUNT_LANES=6`, each K=32 Hawkeye group is one count product, giving exact Hopper QGMMA logits on the FP8-linears-only probe at 7,680 checkable products per Qwen2.5-0.5B forward.
 
 Non-FP8 linears use the baseline per-row/per-token int32 GEMM path in all modes.
 
