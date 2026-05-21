@@ -26,4 +26,10 @@ def test_only_one_package_entrypoint_file_remains():
         p.name
         for p in (Path(__file__).parents[1] / "src" / "int_model_approximation").glob("*.py")
     }
-    assert package_files == {"__init__.py", "__main__.py", "metrics.py"}
+    assert package_files == {
+        "__init__.py",
+        "__main__.py",
+        "hawkeye.py",
+        "hawkeye_freivalds.py",
+        "metrics.py",
+    }

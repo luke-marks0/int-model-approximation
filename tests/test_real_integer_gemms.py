@@ -163,16 +163,15 @@ def test_int32_linear_forward_uses_the_int32_matmul_path(
     assert y.shape == (2, 4)
 
 
-def test_fp8_codebook_correction_uses_only_int32_matmul_paths(
+def test_codebook_linear_uses_one_int32_matmul_path(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _disable_cuda_requirement(monkeypatch)
     fp8_weight = torch.randn(4, 3).to(torch.float8_e4m3fn)
-    layer = entry.Int32Linear(
-        fp8_weight.to(torch.float32),
+    layer = entry.CodebookLinear(
+        fp8_weight,
         bias=None,
-        fp8_weight=fp8_weight,
-        fp8_weight_scale=torch.ones(4, 1),
+        weight_scale=torch.ones(4, 1),
     )
     calls = []
 
@@ -192,7 +191,7 @@ def test_fp8_codebook_correction_uses_only_int32_matmul_paths(
 
     y = layer(torch.randn(2, 3))
 
-    assert len(calls) == 2
+    assert len(calls) == 1
     assert y.shape == (2, 4)
 
 
@@ -200,6 +199,7 @@ def test_int32_path_source_has_no_float_gemm_or_fake_quant_fallbacks() -> None:
     source = "\n".join(
         [
             _source_for_named_node("Int32Linear"),
+            _source_for_named_node("CodebookLinear"),
             _source_for_named_node("_int32_raw_matmul"),
             _source_for_named_node("_int32_raw_matmul_kernel"),
             _source_for_named_node("_int32_matmul"),
@@ -324,9 +324,9 @@ def test_forward_integer_gemms_are_freivalds_verifiable(
         y = model(x)
         torch.cuda.synchronize()
 
-    expected_products = 2 if hasattr(int_layer, "codebook_weight_t") else 1
     assert y.device.type == "cuda"
-    assert len(captured_products) == expected_products
+    assert isinstance(int_layer, entry.CodebookLinear)
+    assert len(captured_products) == 1
     for activations, weight_t in captured_products:
         _assert_freivalds_verifies_int_product(activations, weight_t)
 
