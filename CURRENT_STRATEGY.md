@@ -16,3 +16,9 @@ Non-FP8 linears use the baseline per-row/per-token int32 GEMM path in both modes
   Wider truncation only became usable when it was effectively the original
   codebook sum; the best sweep point kept top1 at 0.9141 with no meaningful top5
   improvement while increasing FP8-linears checks from 168 to 7,680.
+- `try/hybrid-hawkeye-codebook` was kept. The useful selector was Hawkeye for
+  the first 11 transformer layers and codebook for later FP8 linears. On the
+  main Hopper-teacher prompt this moved codebook top1/top5 from 0.9285/0.9215 to
+  0.9431/0.9436 and reduced mean logit L2 from 92.04 to 70.51. The cost tradeoff
+  is not the final target: 91 FP8 linears stay single-product codebook checks,
+  while 77 FP8 linears still use direct Hawkeye replay.
