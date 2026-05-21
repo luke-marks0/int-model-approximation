@@ -29,3 +29,13 @@ Non-FP8 linears use the baseline per-row/per-token int32 GEMM path in both modes
   4592.71 to 4475.65, and DiFR mean from 0.0113 to 0.0100. P99 L2 regressed
   slightly, 206.59 to 210.59. The check cost is 7,849 exact integer products per
   forward on Qwen2.5-0.5B.
+- `try/exact-hawkeye-class-counts` was kept as the high-accuracy construction.
+  It composes every FP8 class pair inside a Hawkeye K=32 group into
+  Freivalds-checkable class-count products, then deterministically replays the
+  Hawkeye alignment and normalization logic from those counts. K=64 grouping was
+  not viable because crossing Hawkeye's K=32 accumulator boundary broke exact
+  agreement. Class chunk 512 with 6 packed weight-class lanes reaches the
+  expected floor of one product per K=32 group: 7,680 checkable FP8-linear
+  products on Qwen2.5-0.5B. On the 16-token FP8-linears-only Hopper probe,
+  top1/top5 are 1.0000/1.0000 and logit L2 is 0.0, but runtime is high
+  (about 208s for the student forward on H100).
