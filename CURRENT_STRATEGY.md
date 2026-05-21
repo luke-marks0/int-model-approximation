@@ -54,3 +54,8 @@ Non-FP8 linears use the baseline per-row/per-token int32 GEMM path in all modes.
   chunk, hoping to approximate Hawkeye's periodic normalization at far below
   K=32 cost. Chunk sizes 2048, 1024, 512, 256, 128, and 64 all regressed top1 on
   the 128-token Hopper FP8-only probe; the best was 0.8984 at 3,840 products.
+- `try/tail-class-counts` was pruned. It used codebook for most FP8 linears and
+  exact class-count reconstruction in only the final transformer layer. The
+  packed class-count replay hit a CUDA illegal-memory fault at 128 tokens, and
+  the unpacked fallback was both expensive and worse: 15,059 products, top1
+  0.9063 on the 128-token Hopper FP8-only probe.
