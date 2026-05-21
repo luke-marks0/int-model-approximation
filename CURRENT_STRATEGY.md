@@ -49,3 +49,8 @@ Non-FP8 linears use the baseline per-row/per-token int32 GEMM path in all modes.
   of 168 FP8-linear products and applied a deterministic scalar gain after each
   codebook GEMM. A sweep from 0.90 to 1.10 found no top1 improvement on the
   128-token Hopper FP8-only probe; gain 1.00 remained best/tied at 0.9141.
+- `try/coarse-codebook-accumulation` was pruned. It split the codebook GEMM into
+  coarse K chunks and rounded the accumulated partial output to bf16 after each
+  chunk, hoping to approximate Hawkeye's periodic normalization at far below
+  K=32 cost. Chunk sizes 2048, 1024, 512, 256, 128, and 64 all regressed top1 on
+  the 128-token Hopper FP8-only probe; the best was 0.8984 at 3,840 products.
