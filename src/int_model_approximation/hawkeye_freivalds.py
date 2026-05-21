@@ -23,6 +23,7 @@ MAX_PACKED_COUNT_LANES = 6
 class HawkeyeFreivaldsStats:
     products_per_group: int
     groups: int
+    packed_group_lanes: int
     class_products_first_pass: int
     class_products_replay_pass: int
     total_checkable_products: int
@@ -630,6 +631,212 @@ def _packed_class_chunk_product(
     return counts, packed_b_classes
 
 
+def _packed_group_class_chunk_product(
+    a_class_pack: torch.Tensor,
+    b_class_pack: torch.Tensor,
+    a_classes: torch.Tensor,
+    b_classes: torch.Tensor,
+    raw_matmul: RawIntMatmul,
+    *,
+    products_per_group: int,
+    packed_group_lanes: int,
+    packed_count_lanes: int,
+) -> tuple[torch.Tensor, torch.Tensor, int]:
+    m_size, pack_k = a_class_pack.shape
+    n_size = b_class_pack.shape[0]
+    group_count = triton.cdiv(pack_k, products_per_group)
+    if group_count > packed_group_lanes:
+        raise RuntimeError("group pack contains more groups than packed_group_lanes")
+    if packed_group_lanes < 1 or packed_group_lanes > packed_count_lanes:
+        raise ValueError("packed_group_lanes must fit inside packed_count_lanes")
+    b_class_lanes = packed_count_lanes // packed_group_lanes
+    if b_class_lanes < 1:
+        raise ValueError("packed_group_lanes leaves no lanes for weight classes")
+    total_lanes = packed_group_lanes * b_class_lanes
+    if total_lanes > MAX_PACKED_COUNT_LANES:
+        raise ValueError("too many packed count lanes")
+
+    packed_b_groups = (b_classes.numel() + b_class_lanes - 1) // b_class_lanes
+    packed_b_classes = torch.full(
+        (packed_b_groups, b_class_lanes),
+        -2,
+        device=b_classes.device,
+        dtype=b_classes.dtype,
+    )
+    packed_b_classes.reshape(-1)[: b_classes.numel()] = b_classes
+    lane_powers = torch.tensor(
+        [PACKED_COUNT_BASE**lane for lane in range(total_lanes)],
+        device=b_classes.device,
+        dtype=torch.int32,
+    )
+    group_ids = torch.div(
+        torch.arange(pack_k, device=b_classes.device, dtype=torch.int64),
+        products_per_group,
+        rounding_mode="floor",
+    )
+
+    a_masks = (a_class_pack.unsqueeze(0) == a_classes[:, None, None]).to(torch.int32)
+    b_matches = b_class_pack[None, None, :, :] == packed_b_classes[:, :, None, None]
+    b_packed = torch.zeros(
+        (packed_b_groups, n_size, pack_k),
+        device=b_classes.device,
+        dtype=torch.int32,
+    )
+    for group_lane in range(group_count):
+        k_mask = group_ids == group_lane
+        group_lane_powers = lane_powers[
+            group_lane * b_class_lanes : (group_lane + 1) * b_class_lanes
+        ]
+        group_values = (
+            b_matches.to(torch.int32) * group_lane_powers[None, :, None, None]
+        ).sum(dim=1)
+        b_packed += torch.where(k_mask[None, None, :], group_values, 0)
+
+    a_flat = a_masks.reshape(a_classes.numel() * m_size, pack_k).contiguous()
+    b_flat = b_packed.permute(2, 0, 1).reshape(pack_k, packed_b_groups * n_size)
+    counts = raw_matmul(a_flat, b_flat.contiguous())
+    counts = counts.reshape(a_classes.numel(), m_size, packed_b_groups, n_size).permute(
+        0,
+        2,
+        1,
+        3,
+    )
+    return counts, packed_b_classes, b_class_lanes
+
+
+@triton.jit
+def _packed_group_contribution_kernel(
+    packed_counts_ptr,
+    packed_b_classes_ptr,
+    a_exp_ptr,
+    a_sig_ptr,
+    max_exp_ptr,
+    contribution_ptr,
+    m_size: tl.constexpr,
+    n_size: tl.constexpr,
+    a_size: tl.constexpr,
+    packed_groups: tl.constexpr,
+    group_lane: tl.constexpr,
+    b_class_lanes: tl.constexpr,
+    internal_width: tl.constexpr,
+    signed_sig_buckets: tl.constexpr,
+    signed_sig_offset: tl.constexpr,
+    packed_count_base_log2: tl.constexpr,
+    packed_count_base: tl.constexpr,
+    block_m: tl.constexpr,
+    block_n: tl.constexpr,
+    class_chunk: tl.constexpr,
+):
+    pid_m = tl.program_id(0)
+    pid_n = tl.program_id(1)
+    offs_m = pid_m * block_m + tl.arange(0, block_m)
+    offs_n = pid_n * block_n + tl.arange(0, block_n)
+    mask = (offs_m[:, None] < m_size) & (offs_n[None, :] < n_size)
+    max_exp = tl.load(
+        max_exp_ptr + offs_m[:, None] * n_size + offs_n[None, :],
+        mask=mask,
+        other=0,
+    ).to(tl.int64)
+    accum = tl.zeros((block_m, block_n), dtype=tl.int64)
+
+    for ai in range(0, class_chunk):
+        a_valid = ai < a_size
+        a_exp = tl.load(a_exp_ptr + ai, mask=a_valid, other=0).to(tl.int64)
+        a_sig = tl.load(a_sig_ptr + ai, mask=a_valid, other=0).to(tl.int64)
+        for group in range(0, packed_groups):
+            packed_count = tl.load(
+                packed_counts_ptr
+                + ((ai * packed_groups + group) * m_size + offs_m[:, None]) * n_size
+                + offs_n[None, :],
+                mask=mask & a_valid,
+                other=0,
+            ).to(tl.int64)
+            for b_lane in range(0, b_class_lanes):
+                b_class = tl.load(
+                    packed_b_classes_ptr + group * b_class_lanes + b_lane,
+                    mask=a_valid,
+                    other=-2,
+                ).to(tl.int64)
+                valid = a_valid & (b_class >= 0)
+                b_exp = b_class // signed_sig_buckets + 1
+                b_sig = b_class % signed_sig_buckets - signed_sig_offset
+                prod_exp = a_exp + b_exp - 14
+                signed_product = a_sig * b_sig
+                if internal_width >= 7:
+                    scaled = signed_product << (internal_width - 7)
+                else:
+                    scaled_abs = tl.abs(signed_product)
+                    scaled_mag = scaled_abs >> (7 - internal_width)
+                    scaled = tl.where(signed_product < 0, -scaled_mag, scaled_mag)
+                shift = max_exp - prod_exp
+                shift = tl.minimum(tl.maximum(shift, 0), 62)
+                aligned_mag = tl.abs(scaled) >> shift
+                aligned = tl.where(scaled < 0, -aligned_mag, aligned_mag)
+                lane = group_lane * b_class_lanes + b_lane
+                count = (packed_count >> (lane * packed_count_base_log2)) & (
+                    packed_count_base - 1
+                )
+                accum += tl.where(valid, count * aligned, 0)
+
+    old = tl.load(
+        contribution_ptr + offs_m[:, None] * n_size + offs_n[None, :],
+        mask=mask,
+        other=0,
+    ).to(tl.int64)
+    tl.store(
+        contribution_ptr + offs_m[:, None] * n_size + offs_n[None, :],
+        old + accum,
+        mask=mask,
+    )
+
+
+def _add_packed_group_contribution_fused(
+    contribution: torch.Tensor,
+    packed_counts: torch.Tensor,
+    packed_b_classes: torch.Tensor,
+    a_chunk_exp: torch.Tensor,
+    a_chunk_sig: torch.Tensor,
+    max_exp: torch.Tensor,
+    *,
+    group_lane: int,
+    b_class_lanes: int,
+    a_size: int,
+    internal_width: int,
+    class_chunk: int,
+) -> None:
+    if a_size > class_chunk:
+        raise RuntimeError("packed group contribution received chunk larger than class_chunk")
+    if contribution.device.type != "cuda":
+        raise RuntimeError("packed group contribution fusion is CUDA-only")
+    m_size, n_size = contribution.shape
+    block_m = 4
+    block_n = 32
+    packed_groups = int(packed_b_classes.shape[0])
+    _packed_group_contribution_kernel[(triton.cdiv(m_size, block_m), triton.cdiv(n_size, block_n))](
+        packed_counts.contiguous(),
+        packed_b_classes.contiguous(),
+        a_chunk_exp.contiguous(),
+        a_chunk_sig.contiguous(),
+        max_exp,
+        contribution,
+        m_size,
+        n_size,
+        a_size,
+        packed_groups,
+        group_lane,
+        b_class_lanes,
+        internal_width,
+        SIGNED_SIG_BUCKETS,
+        SIGNED_SIG_OFFSET,
+        PACKED_COUNT_BASE_LOG2,
+        PACKED_COUNT_BASE,
+        block_m=block_m,
+        block_n=block_n,
+        class_chunk=class_chunk,
+        num_warps=4,
+    )
+
+
 def _iter_class_chunks(classes: torch.Tensor, chunk_size: int) -> list[torch.Tensor]:
     return [classes[start : start + chunk_size] for start in range(0, classes.numel(), chunk_size)]
 
@@ -650,6 +857,163 @@ def _group_present_exponent(
     ).amax(dim=2)
 
 
+def _exact_hawkeye_fp8_sum_packed_groups(
+    a_exp: torch.Tensor,
+    a_nonzero: torch.Tensor,
+    b_exp: torch.Tensor,
+    b_nonzero: torch.Tensor,
+    a_class: torch.Tensor,
+    b_class: torch.Tensor,
+    x_scale: torch.Tensor,
+    w_scale: torch.Tensor,
+    raw_matmul: RawIntMatmul,
+    *,
+    products_per_group: int,
+    internal_width: int,
+    zero_exponent: int,
+    class_chunk: int,
+    packed_count_lanes: int,
+    packed_group_lanes: int,
+) -> tuple[torch.Tensor, HawkeyeFreivaldsStats]:
+    if packed_group_lanes < 1 or packed_group_lanes > packed_count_lanes:
+        raise ValueError("packed_group_lanes must fit inside packed_count_lanes")
+    if packed_count_lanes // packed_group_lanes < 1:
+        raise ValueError("packed_group_lanes leaves no lanes for weight classes")
+    if products_per_group > PACKED_COUNT_BASE:
+        raise ValueError(
+            "packed group counts require products_per_group <= PACKED_COUNT_BASE "
+            "to avoid cross-lane carries"
+        )
+
+    m_size, k_size = a_class.shape
+    n_size = b_class.shape[0]
+    device = a_class.device
+    acc_sign = torch.zeros((m_size, n_size), device=device, dtype=torch.bool)
+    acc_exp = torch.full((m_size, n_size), zero_exponent, device=device, dtype=torch.int64)
+    acc_sig = torch.zeros((m_size, n_size), device=device, dtype=torch.int64)
+
+    groups = 0
+    replay_pass_products = 0
+    max_a_classes = 0
+    max_b_classes = 0
+    pack_width = products_per_group * packed_group_lanes
+
+    for pack_k0 in range(0, k_size, pack_width):
+        pack_k1 = min(pack_k0 + pack_width, k_size)
+        pack_group_count = triton.cdiv(pack_k1 - pack_k0, products_per_group)
+        a_pack = a_class[:, pack_k0:pack_k1]
+        b_pack = b_class[:, pack_k0:pack_k1]
+        a_classes = torch.unique(a_pack[a_pack >= 0])
+        b_classes = torch.unique(b_pack[b_pack >= 0])
+        max_a_classes = max(max_a_classes, int(a_classes.numel()))
+        max_b_classes = max(max_b_classes, int(b_classes.numel()))
+        a_chunks = _iter_class_chunks(a_classes, class_chunk)
+        b_class_lanes = packed_count_lanes // packed_group_lanes
+        b_chunk_size = class_chunk * b_class_lanes
+        b_chunks = _iter_class_chunks(b_classes, b_chunk_size)
+
+        # Later groups need the normalized accumulator produced by earlier groups,
+        # so the packed count products are computed once and replayed sequentially.
+        packed_chunk_results: list[
+            tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, int]
+        ] = []
+        for a_chunk in a_chunks:
+            a_chunk_exp = a_chunk // SIGNED_SIG_BUCKETS + 1
+            a_chunk_sig = a_chunk % SIGNED_SIG_BUCKETS - SIGNED_SIG_OFFSET
+            for b_chunk in b_chunks:
+                packed_counts, packed_b_classes, chunk_b_class_lanes = (
+                    _packed_group_class_chunk_product(
+                        a_pack,
+                        b_pack,
+                        a_chunk,
+                        b_chunk,
+                        raw_matmul,
+                        products_per_group=products_per_group,
+                        packed_group_lanes=packed_group_lanes,
+                        packed_count_lanes=packed_count_lanes,
+                    )
+                )
+                replay_pass_products += 1
+                packed_chunk_results.append(
+                    (
+                        packed_counts,
+                        packed_b_classes,
+                        a_chunk_exp,
+                        a_chunk_sig,
+                        chunk_b_class_lanes,
+                    )
+                )
+
+        for group_lane in range(pack_group_count):
+            groups += 1
+            k0 = pack_k0 + group_lane * products_per_group
+            k1 = min(k0 + products_per_group, k_size)
+            a_exp_group = a_exp[:, k0:k1]
+            b_exp_group = b_exp[:, k0:k1]
+            a_nonzero_group = a_nonzero[:, k0:k1]
+            b_nonzero_group = b_nonzero[:, k0:k1]
+            acc_exp_eff = torch.where(
+                acc_sig != 0,
+                acc_exp,
+                torch.full_like(acc_exp, zero_exponent),
+            )
+            present_exp = _group_present_exponent(
+                a_exp_group,
+                b_exp_group,
+                a_nonzero_group,
+                b_nonzero_group,
+                zero_exponent,
+            )
+            max_exp = torch.maximum(acc_exp_eff, present_exp)
+            contribution = torch.zeros((m_size, n_size), device=device, dtype=torch.int64)
+            for (
+                packed_counts,
+                packed_b_classes,
+                a_chunk_exp,
+                a_chunk_sig,
+                chunk_b_class_lanes,
+            ) in packed_chunk_results:
+                _add_packed_group_contribution_fused(
+                    contribution,
+                    packed_counts,
+                    packed_b_classes,
+                    a_chunk_exp,
+                    a_chunk_sig,
+                    max_exp,
+                    group_lane=group_lane,
+                    b_class_lanes=chunk_b_class_lanes,
+                    a_size=int(a_chunk_exp.numel()),
+                    internal_width=internal_width,
+                    class_chunk=class_chunk,
+                )
+
+            acc_base = _accumulator_base(acc_sig, internal_width)
+            aligned_acc = _signed_shift_right_towards_zero(acc_base, max_exp - acc_exp_eff)
+            aligned_acc = torch.where(acc_sign, -aligned_acc, aligned_acc)
+            acc_sign, acc_exp, acc_sig = _normalize_total(
+                aligned_acc + contribution,
+                max_exp,
+                internal_width,
+                zero_exponent,
+            )
+
+    y = _gfloat_to_float32(acc_sign, acc_exp, acc_sig)
+    y = y * x_scale * w_scale.reshape(1, -1).to(torch.float32)
+    stats = HawkeyeFreivaldsStats(
+        products_per_group=products_per_group,
+        groups=groups,
+        packed_group_lanes=packed_group_lanes,
+        class_products_first_pass=0,
+        class_products_replay_pass=replay_pass_products,
+        total_checkable_products=replay_pass_products,
+        max_activation_classes_per_group=max_a_classes,
+        max_weight_classes_per_group=max_b_classes,
+        class_chunk=class_chunk,
+        packed_count_lanes=packed_count_lanes,
+    )
+    return y.to(torch.bfloat16), stats
+
+
 def exact_hawkeye_fp8_sum(
     x_fp8: torch.Tensor,
     x_scale: torch.Tensor,
@@ -662,6 +1026,7 @@ def exact_hawkeye_fp8_sum(
     zero_exponent: int = -139,
     class_chunk: int = 32,
     packed_count_lanes: int = 1,
+    packed_group_lanes: int = 1,
     fused_replay: bool = False,
     cache_weight_chunks: bool = False,
     count_dtype: torch.dtype = torch.int32,
@@ -676,10 +1041,36 @@ def exact_hawkeye_fp8_sum(
             f"packed_count_lanes must be in [1, {MAX_PACKED_COUNT_LANES}], "
             f"got {packed_count_lanes}"
         )
+    if packed_group_lanes < 1 or packed_group_lanes > packed_count_lanes:
+        raise ValueError("packed_group_lanes must fit inside packed_count_lanes")
+    if packed_group_lanes > 1 and (count_dtype != torch.int32 or fused_replay or cache_weight_chunks):
+        raise ValueError(
+            "packed_group_lanes > 1 currently requires int32 count products without "
+            "fused_replay or cache_weight_chunks"
+        )
     a_exp, a_sig, a_nonzero = _decode_fp8_fields(x_fp8)
     b_exp, b_sig, b_nonzero = _decode_fp8_fields(w_fp8)
     a_class = _class_ids(a_exp, a_sig, a_nonzero)
     b_class = _class_ids(b_exp, b_sig, b_nonzero)
+
+    if packed_group_lanes > 1:
+        return _exact_hawkeye_fp8_sum_packed_groups(
+            a_exp,
+            a_nonzero,
+            b_exp,
+            b_nonzero,
+            a_class,
+            b_class,
+            x_scale,
+            w_scale,
+            raw_matmul,
+            products_per_group=products_per_group,
+            internal_width=internal_width,
+            zero_exponent=zero_exponent,
+            class_chunk=class_chunk,
+            packed_count_lanes=packed_count_lanes,
+            packed_group_lanes=packed_group_lanes,
+        )
 
     m_size, k_size = a_class.shape
     n_size = b_class.shape[0]
@@ -843,6 +1234,7 @@ def exact_hawkeye_fp8_sum(
     stats = HawkeyeFreivaldsStats(
         products_per_group=products_per_group,
         groups=groups,
+        packed_group_lanes=packed_group_lanes,
         class_products_first_pass=first_pass_products,
         class_products_replay_pass=replay_pass_products,
         total_checkable_products=first_pass_products + replay_pass_products,

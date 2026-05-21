@@ -173,6 +173,11 @@ def main() -> None:
         type=int,
         default=entry.HAWKEYE_PACKED_COUNT_LANES,
     )
+    parser.add_argument(
+        "--hawkeye-packed-group-lanes",
+        type=int,
+        default=entry.HAWKEYE_PACKED_GROUP_LANES,
+    )
     parser.add_argument("--hawkeye-block-m", type=int, default=entry.HAWKEYE_BLOCK_M)
     parser.add_argument("--hawkeye-block-n", type=int, default=entry.HAWKEYE_BLOCK_N)
     parser.add_argument("--student-fp8-only", action="store_true")
@@ -187,6 +192,7 @@ def main() -> None:
     entry.HAWKEYE_INTERNAL_WIDTH = args.hawkeye_width
     entry.HAWKEYE_CLASS_CHUNK = args.hawkeye_class_chunk
     entry.HAWKEYE_PACKED_COUNT_LANES = args.hawkeye_packed_count_lanes
+    entry.HAWKEYE_PACKED_GROUP_LANES = args.hawkeye_packed_group_lanes
     entry.HAWKEYE_BLOCK_M = args.hawkeye_block_m
     entry.HAWKEYE_BLOCK_N = args.hawkeye_block_n
 
@@ -254,6 +260,7 @@ def main() -> None:
             "internal_width": args.hawkeye_width,
             "class_chunk": args.hawkeye_class_chunk,
             "packed_count_lanes": args.hawkeye_packed_count_lanes,
+            "packed_group_lanes": args.hawkeye_packed_group_lanes,
             "block_m": args.hawkeye_block_m,
             "block_n": args.hawkeye_block_n,
         },

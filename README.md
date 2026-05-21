@@ -56,6 +56,19 @@ Choose the student with `IMA_STUDENT_KERNEL`:
   products per forward, versus 168 for `codebook`; accuracy is exact against the
   Hopper QGMMA teacher on the FP8-linears-only probe.
 
+- `try/packed-hawkeye-group-counts`: experimental extension of
+  `hawkeye-class-counts` that packs several exact K=32 groups into one count
+  product. It does not change Hawkeye's accumulator boundary; deterministic
+  replay still normalizes after every K=32 QGMMA step. Instead, it spends some
+  base-64 packed count lanes on the group index and the rest on weight classes,
+  then decodes each group during replay. With
+  `IMA_HAWKEYE_PACKED_GROUP_LANES=2`, Qwen2.5-0.5B drops from 7,680 to 3,840
+  checkable FP8-linear products while remaining exact on the 16-token
+  FP8-linears-only Hopper probe. The current evaluator is slower because each
+  product is wider and packed count outputs are materialized for sequential
+  replay; this is a verifier product-count improvement, not yet a
+  prover/runtime improvement.
+
 In short, `codebook` gives cheap checking with high teacher error, `hawkeye`
 gives perfect teacher reconstruction without cheap checking, and
 `hawkeye-class-counts` gives perfect teacher reconstruction with checkable
@@ -128,6 +141,15 @@ To run the exact class-count reconstruction:
 ```bash
 IMA_TEACHER_KERNEL=hopper_qgmma IMA_STUDENT_KERNEL=hawkeye-class-counts \
   IMA_HAWKEYE_CLASS_CHUNK=512 IMA_HAWKEYE_PACKED_COUNT_LANES=6 \
+  uv run python -m int_model_approximation
+```
+
+To pack two exact K=32 Hawkeye groups into each checkable count product:
+
+```bash
+IMA_TEACHER_KERNEL=hopper_qgmma IMA_STUDENT_KERNEL=hawkeye-class-counts \
+  IMA_HAWKEYE_CLASS_CHUNK=512 IMA_HAWKEYE_PACKED_COUNT_LANES=6 \
+  IMA_HAWKEYE_PACKED_GROUP_LANES=2 \
   uv run python -m int_model_approximation
 ```
 

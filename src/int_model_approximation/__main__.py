@@ -44,6 +44,7 @@ HAWKEYE_PRODUCTS_PER_GROUP = int(os.environ.get("IMA_HAWKEYE_GROUP", "32"))
 HAWKEYE_INTERNAL_WIDTH = int(os.environ.get("IMA_HAWKEYE_WIDTH", "14"))
 HAWKEYE_CLASS_CHUNK = int(os.environ.get("IMA_HAWKEYE_CLASS_CHUNK", "32"))
 HAWKEYE_PACKED_COUNT_LANES = int(os.environ.get("IMA_HAWKEYE_PACKED_COUNT_LANES", "6"))
+HAWKEYE_PACKED_GROUP_LANES = int(os.environ.get("IMA_HAWKEYE_PACKED_GROUP_LANES", "1"))
 HAWKEYE_ZERO_EXPONENT = -139
 HAWKEYE_BLOCK_M = int(os.environ.get("IMA_HAWKEYE_BLOCK_M", "4"))
 HAWKEYE_BLOCK_N = int(os.environ.get("IMA_HAWKEYE_BLOCK_N", "32"))
@@ -515,6 +516,7 @@ class HawkeyeClassCountsLinear(nn.Module):
             zero_exponent=HAWKEYE_ZERO_EXPONENT,
             class_chunk=HAWKEYE_CLASS_CHUNK,
             packed_count_lanes=HAWKEYE_PACKED_COUNT_LANES,
+            packed_group_lanes=HAWKEYE_PACKED_GROUP_LANES,
         )
         if self.bias is not None:
             y = y + self.bias.to(y.dtype)
@@ -791,6 +793,7 @@ def main() -> None:
             {
                 "class_chunk": HAWKEYE_CLASS_CHUNK,
                 "packed_count_lanes": HAWKEYE_PACKED_COUNT_LANES,
+                "packed_group_lanes": HAWKEYE_PACKED_GROUP_LANES,
                 "products_per_group": HAWKEYE_PRODUCTS_PER_GROUP,
                 "internal_width": HAWKEYE_INTERNAL_WIDTH,
             }
