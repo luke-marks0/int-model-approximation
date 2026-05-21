@@ -40,3 +40,8 @@ Non-FP8 linears use the baseline per-row/per-token int32 GEMM path in all modes.
   products on Qwen2.5-0.5B. On the 16-token FP8-linears-only Hopper probe,
   top1/top5 are 1.0000/1.0000 and logit L2 is 0.0, but runtime is high
   (about 208s for the student forward on H100).
+- `try/global-hawkeye-aligned-codebook` was pruned. It kept the normal codebook
+  product and added one globally exponent-aligned Hawkeye-style product per FP8
+  linear, so verification cost was 336 products. The correction reduced some L2
+  statistics but moved argmax decisions the wrong way on the 128-token Hopper
+  FP8-only probe: best top1 was 0.9063 versus the codebook baseline 0.9141.
