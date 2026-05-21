@@ -2,15 +2,18 @@
 
 DiFR layer-error measurement for a real quantized Hugging Face model.
 
-The goal is to build a cheap, provable integer proxy for a production quantized
-model. Proving the production float/FP8 computation directly is expensive: the
-matmuls do not give the clean algebraic product that Freivalds-style checks need,
-and trying to prove float behavior tends to pull in costly range checks,
-rounding semantics, tolerance windows, and implementation-specific kernel state.
+The ultimate goal is to build a low-error integer version of a production FP8
+teacher whose matmuls are cheap to check. Proving the production float/FP8
+computation directly is expensive: the matmuls do not give the clean algebraic
+product that Freivalds-style checks need, and trying to prove float behavior
+tends to pull in costly range checks, rounding semantics, tolerance windows, and
+implementation-specific kernel state.
 
-This repo therefore measures a narrower question: what do we get from integer
-students that either preserve a cheap Freivalds proof shape or exactly replay the
-hardware FP8 accumulator?
+This repo studies two useful endpoints. The `codebook` path keeps the cheap
+Freivalds proof shape, but has high error against the genuine FP8 teacher. The
+`hawkeye` path is a perfect recreation of the Hopper FP8 teacher, but is not
+cheaply checkable. The research target is to unify the benefits of both ideas:
+the low error of Hawkeye with the cheap checkability of a single integer product.
 
 The supported run loads `RedHatAI/Qwen2.5-0.5B-FP8-dynamic`, executes a real FP8
 reference forward, builds an integerized copy, and writes layer and logit error
@@ -26,34 +29,37 @@ Choose the student with `IMA_STUDENT_KERNEL`:
   integer FP8 codebook, multiplied by the committed integer FP8 weights, and
   deterministically rescaled. This is the proof-friendly path: each FP8 linear
   is a single ordinary integer matrix product, so Freivalds' check applies
-  directly. It perfectly reconstructs the repo's codebook-defined FP8 product,
-  but it is not a faithful replay of NVIDIA's FP8 Tensor Core accumulator.
+  directly. Its downside is accuracy: because it verifies a codebook-defined
+  product rather than NVIDIA's FP8 Tensor Core accumulator, its error against the
+  genuine FP8 teacher is high.
 
 - `hawkeye`: FP8 checkpoint linears are replaced by direct Hawkeye integer replay
   of Hopper FP8 QGMMA accumulation, using K=32 groups by default. This is the
-  hardware-faithful path: with the Hopper QGMMA teacher it can exactly match the
-  genuine FP8 matmul output. It is not cheaply Freivalds-checkable because the
-  computation is not one algebraic matrix product; every output element runs
+  hardware-faithful path: with the Hopper QGMMA teacher it exactly matches the
+  genuine FP8 matmul output. Its downside is verification cost: it is not cheaply
+  Freivalds-checkable because it is not one algebraic matrix product. Every
+  output element runs
   per-group max-exponent alignment, signed shifts, normalization, and bf16
   conversion logic.
 
-In short, use `codebook` when the main requirement is one cheap, checkable
-integer matmul per FP8 linear. Use `hawkeye` when the main requirement is exact
-agreement with the genuine Hopper FP8 teacher and the proof cost is not the
-deciding constraint.
+In short, `codebook` gives cheap checking with high teacher error, and `hawkeye`
+gives perfect teacher reconstruction without cheap checking. The intended next
+step is not to pick one permanently, but to find an integer construction that
+combines their strengths.
 
 ## Development target
 
-The primary job for a developer working on the `codebook` path is to reduce the
-error introduced by the integer GEMMs while preserving the proof shape:
+The primary job for a developer is to reduce teacher error while preserving, or
+recovering, the cheap proof shape:
 
 ```text
 integer operands -> exact integer matrix product -> deterministic postprocessing
 ```
 
-The codebook integer GEMM can be checked cheaply with Freivalds because it is an
-ordinary exact matrix product over integers. Any improvement to that path must
-keep that property intact. In particular:
+The codebook integer GEMM shows why this proof shape is attractive: it can be
+checked cheaply with Freivalds because it is an ordinary exact matrix product
+over integers. Any low-error replacement should preserve that property where
+possible. In particular:
 
 - the GEMM itself must remain a real integer GPU operation, not a float GEMM,
   fake-quantized operation, CPU fallback, or emulated path
@@ -64,9 +70,9 @@ keep that property intact. In particular:
 - any correction after the GEMM must be deterministic from fixed, committed, or
   reproducibly derived data
 
-The `hawkeye` path has a different goal: it is allowed to replay the FP8
-accumulator directly, and should be judged against the Hopper QGMMA teacher
-rather than against the Freivalds proof shape.
+The `hawkeye` path shows what the low-error target should look like: exact
+agreement with the Hopper QGMMA teacher. Its current direct replay is a reference
+for accuracy, not a final proof-friendly construction.
 
 Common sources of integer GEMM error include operand quantization, scale-field
 mismatch, cancellation in poorly conditioned dot products, clipping, output
