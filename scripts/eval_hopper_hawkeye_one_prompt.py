@@ -1,4 +1,4 @@
-"""Compare the Hopper QGMMA teacher and Hawkeye-Freivalds student on one prompt."""
+"""Compare the Hopper QGMMA teacher and supported integer students on one prompt."""
 
 from __future__ import annotations
 
@@ -72,11 +72,52 @@ def _load_teacher(model_id: str, device: str, teacher_kernel: str) -> tuple[torc
     return entry._freeze(model), len(replaced)
 
 
-def _load_student(model_id: str, device: str, student_kernel: str) -> tuple[torch.nn.Module, int]:
+def _replace_student_fp8_linears_only(model: torch.nn.Module) -> list[str]:
+    replacements: list[tuple[str, torch.nn.Linear]] = []
+    for name, module in model.named_modules():
+        if (
+            isinstance(module, torch.nn.Linear)
+            and module.weight.dtype == torch.float8_e4m3fn
+            and hasattr(module, "weight_scale")
+        ):
+            replacements.append((name, module))
+
+    for name, module in replacements:
+        if entry.STUDENT_KERNEL == "hawkeye":
+            replacement = entry.HawkeyeLinear(module.weight, module.weight_scale, module.bias)
+        elif entry.STUDENT_KERNEL == "codebook":
+            replacement = entry.CodebookLinear(module.weight, module.weight_scale, module.bias)
+        else:
+            supported = ", ".join(sorted(entry.SUPPORTED_STUDENT_KERNELS))
+            raise RuntimeError(
+                f"unknown student kernel {entry.STUDENT_KERNEL!r}; choose one of: {supported}"
+            )
+        entry._set_submodule(model, name, replacement)
+
+    if not replacements:
+        raise RuntimeError("No FP8 Linear modules with weight_scale were found.")
+    return [name for name, _ in replacements]
+
+
+def _load_student(
+    model_id: str,
+    device: str,
+    student_kernel: str,
+    *,
+    fp8_only: bool,
+) -> tuple[torch.nn.Module, int]:
     entry.STUDENT_KERNEL = student_kernel
+    if entry.STUDENT_KERNEL not in entry.SUPPORTED_STUDENT_KERNELS:
+        supported = ", ".join(sorted(entry.SUPPORTED_STUDENT_KERNELS))
+        raise RuntimeError(
+            f"unknown student kernel {entry.STUDENT_KERNEL!r}; choose one of: {supported}"
+        )
     model = AutoModelForCausalLM.from_pretrained(model_id).to(device)
     entry._disable_compressed_tensor_hooks(model)
-    replaced = entry._replace_int32_linears(model)
+    if fp8_only:
+        replaced = _replace_student_fp8_linears_only(model)
+    else:
+        replaced = entry._replace_int32_linears(model)
     return entry._freeze(model), len(replaced)
 
 
@@ -110,29 +151,30 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model-id", default=entry.MODEL_ID)
     parser.add_argument("--teacher-kernel", default="hopper_qgmma")
-    parser.add_argument("--student-kernel", default="hawkeye_exact")
+    parser.add_argument(
+        "--student-kernel",
+        choices=sorted(entry.SUPPORTED_STUDENT_KERNELS),
+        default="hawkeye",
+    )
     parser.add_argument("--dataset-url", default=DEFAULT_DATASET_URL)
     parser.add_argument("--dataset-index", type=int, default=0)
     parser.add_argument("--max-tokens", type=int, default=16)
     parser.add_argument("--hawkeye-group", type=int, default=entry.HAWKEYE_PRODUCTS_PER_GROUP)
     parser.add_argument("--hawkeye-width", type=int, default=entry.HAWKEYE_INTERNAL_WIDTH)
-    parser.add_argument("--class-chunk", type=int, default=entry.HAWKEYE_CLASS_CHUNK)
-    parser.add_argument("--packed-count-lanes", type=int, default=entry.HAWKEYE_PACKED_COUNT_LANES)
-    parser.add_argument("--fused-replay", action="store_true")
-    parser.add_argument("--cache-weight-chunks", action="store_true")
-    parser.add_argument("--count-matmul", choices=["int64", "int32", "int8"], default=entry.HAWKEYE_COUNT_MATMUL)
+    parser.add_argument("--hawkeye-block-m", type=int, default=entry.HAWKEYE_BLOCK_M)
+    parser.add_argument("--hawkeye-block-n", type=int, default=entry.HAWKEYE_BLOCK_N)
+    parser.add_argument("--student-fp8-only", action="store_true")
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
 
+    entry.TEACHER_KERNEL = args.teacher_kernel
+    entry.STUDENT_KERNEL = args.student_kernel
     device = entry._require_gpu()
     torch.manual_seed(0)
     entry.HAWKEYE_PRODUCTS_PER_GROUP = args.hawkeye_group
     entry.HAWKEYE_INTERNAL_WIDTH = args.hawkeye_width
-    entry.HAWKEYE_CLASS_CHUNK = args.class_chunk
-    entry.HAWKEYE_PACKED_COUNT_LANES = args.packed_count_lanes
-    entry.HAWKEYE_FUSED_REPLAY = args.fused_replay
-    entry.HAWKEYE_CACHE_WEIGHT_CHUNKS = args.cache_weight_chunks
-    entry.HAWKEYE_COUNT_MATMUL = args.count_matmul
+    entry.HAWKEYE_BLOCK_M = args.hawkeye_block_m
+    entry.HAWKEYE_BLOCK_N = args.hawkeye_block_n
 
     prompt_start = time.perf_counter()
     prompt, record = _load_dolly_prompt(args.dataset_url, args.dataset_index)
@@ -161,7 +203,12 @@ def main() -> None:
     _unload(teacher)
 
     student_load_start = time.perf_counter()
-    student, student_linears = _load_student(args.model_id, device, args.student_kernel)
+    student, student_linears = _load_student(
+        args.model_id,
+        device,
+        args.student_kernel,
+        fp8_only=args.student_fp8_only,
+    )
     student_load_s = _seconds_since(student_load_start)
 
     student_forward_start = time.perf_counter()
@@ -179,6 +226,7 @@ def main() -> None:
         "model": args.model_id,
         "teacher_kernel": args.teacher_kernel,
         "student_kernel": args.student_kernel,
+        "student_fp8_only": args.student_fp8_only,
         "dataset_url": args.dataset_url,
         "dataset_index": args.dataset_index,
         "dataset_category": record.get("category"),
@@ -190,11 +238,8 @@ def main() -> None:
         "hawkeye": {
             "products_per_group": args.hawkeye_group,
             "internal_width": args.hawkeye_width,
-            "class_chunk": args.class_chunk,
-            "packed_count_lanes": args.packed_count_lanes,
-            "fused_replay": args.fused_replay,
-            "cache_weight_chunks": args.cache_weight_chunks,
-            "count_matmul": args.count_matmul,
+            "block_m": args.hawkeye_block_m,
+            "block_n": args.hawkeye_block_n,
         },
         "timing_s": {
             "hf_prompt_fetch": prompt_s,

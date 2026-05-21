@@ -82,6 +82,7 @@ def main() -> None:
     parser.add_argument("--repeat", type=int, default=1)
     args = parser.parse_args()
 
+    entry.TEACHER_KERNEL = args.teacher_kernel
     device = entry._require_gpu()
     torch.manual_seed(0)
 
