@@ -45,3 +45,7 @@ Non-FP8 linears use the baseline per-row/per-token int32 GEMM path in all modes.
   linear, so verification cost was 336 products. The correction reduced some L2
   statistics but moved argmax decisions the wrong way on the 128-token Hopper
   FP8-only probe: best top1 was 0.9063 versus the codebook baseline 0.9141.
+- `try/codebook-output-gain` was pruned. It kept exactly the codebook proof cost
+  of 168 FP8-linear products and applied a deterministic scalar gain after each
+  codebook GEMM. A sweep from 0.90 to 1.10 found no top1 improvement on the
+  128-token Hopper FP8-only probe; gain 1.00 remained best/tied at 0.9141.
