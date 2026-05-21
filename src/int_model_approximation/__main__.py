@@ -7,7 +7,8 @@ This is intentionally not configurable. It evaluates the current HF quantized
 model against an integerized copy using real GPU kernels only:
 
 * reference linears with FP8 weights run through torch._scaled_mm
-* integerized linears run through a Triton int32 x int32 -> int64 CUDA kernel
+* codebook student linears run through a Triton int32 x int32 -> int64 CUDA kernel
+* hawkeye student linears replay the Hopper FP8 accumulator with integer logic
 * no CPU fallback is allowed
 """
 
@@ -15,6 +16,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,25 +28,72 @@ import triton
 import triton.language as tl
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+from int_model_approximation.hawkeye import hawkeye_fp8_sum
 from int_model_approximation.metrics import logit_l2, post_gumbel_margin, top1_match, topk_overlap
 
 
 MODEL_ID = "RedHatAI/Qwen2.5-0.5B-FP8-dynamic"
 OUTPUT_PATH = Path("results/difr_layer_errors.json")
+TEACHER_KERNEL = os.environ.get("IMA_TEACHER_KERNEL", "fp8_scaled_mm")
+HOPPER_QGMMA_TEACHER_KERNELS = {"hopper_qgmma", "hawkeye_qgmma"}
+STUDENT_KERNEL = os.environ.get("IMA_STUDENT_KERNEL", "codebook")
+SUPPORTED_STUDENT_KERNELS = {"codebook", "hawkeye"}
+HAWKEYE_PRODUCTS_PER_GROUP = int(os.environ.get("IMA_HAWKEYE_GROUP", "32"))
+HAWKEYE_INTERNAL_WIDTH = int(os.environ.get("IMA_HAWKEYE_WIDTH", "14"))
+HAWKEYE_ZERO_EXPONENT = -139
+HAWKEYE_BLOCK_M = int(os.environ.get("IMA_HAWKEYE_BLOCK_M", "4"))
+HAWKEYE_BLOCK_N = int(os.environ.get("IMA_HAWKEYE_BLOCK_N", "32"))
 PROMPT = (
     "Layer-wise error measurement matters because a quantized language model can "
     "preserve final-token behavior while still accumulating hidden-state drift. "
     "This run compares a production quantized checkpoint with an integerized copy "
-    "using one deterministic forward pass through the same prompt."
+    "using one deterministic forward pass through the same prompt.\n\n"
+    "The teacher is RedHatAI's FP8-dynamic Qwen2.5-0.5B. The default codebook "
+    "student replaces FP8 Linear layers with one Triton int32-by-int32 matmul "
+    "over exact FP8-codebook integer values. That product can be checked cheaply "
+    "by Freivalds' algorithm: a verifier picks a random sign vector r, computes "
+    "B r and then A (B r), and accepts when (A B) r equals the claimed product "
+    "times r.\n\n"
+    "Consider the canonical SwiGLU block: y = silu(x @ W_gate.T) * (x @ W_up.T), "
+    "then z = y @ W_down.T. Three linears, three integer matmuls per token. The "
+    "intermediate hidden size at 0.5B is 4864; at 7B it is 18944. A naive int8 "
+    "tile lands well below an int32 tile in expressivity but well above it in "
+    "tensor-core throughput. Choosing between them is, in effect, choosing where "
+    "to spend a few bits of accuracy in exchange for a Freivalds proof that "
+    "remains cheap to verify on chain.\n\n"
+    "def softmax(x):\n"
+    "    m = x.max(axis=-1, keepdims=True)\n"
+    "    e = (x - m).exp()\n"
+    "    return e / e.sum(axis=-1, keepdims=True)\n\n"
+    "RMSNorm is similar in spirit: y = x * gamma / sqrt(mean(x ** 2) + eps), "
+    "where the bracketed mean is the only nonlinear piece. The interesting "
+    "question for an integer proxy is not whether the nonlinearity can be made "
+    "exact, but whether the deterministic post-processing applied to the matmul "
+    "outputs absorbs enough of the rounding error introduced upstream that the "
+    "logit distribution stays close to the FP8 reference.\n\n"
+    "In ancient mythology, the river Styx separated the world of the living from "
+    "the underworld, and Charon ferried the dead across it for a single coin. "
+    "Numerical analysts have their own Styx: catastrophic cancellation in "
+    "ill-conditioned dot products, where two large quantities of opposite sign "
+    "nearly cancel and the tiny residue carries all of the answer's information. "
+    "When you build a fully integer pipeline, you don't escape this — you choose "
+    "where to confront it, and you pay your coin in extra bits of accumulator.\n\n"
+    "Pourquoi quantifier? Parce que la mémoire est chère et la bande passante "
+    "encore plus. \"The proof is in the pudding,\" she said, opening her laptop. "
+    "Wenn der Beweis günstig sein soll, muss das Produkt exakt sein. 量化的关键 "
+    "在于把误差留在可以被验证者捕获的地方。\n\n"
+    "Ultimately, the practical question for this repository is narrower than the "
+    "philosophy suggests. Per-layer isolated error tells us whether a particular "
+    "integer linear path got closer to the FP8 reference; per-layer cumulative "
+    "error tells us whether that local improvement actually propagates through "
+    "the residual stream; and the post-Gumbel margin on the final logits tells us "
+    "whether any of it would change a downstream sampler's decision. A change "
+    "that improves isolated error but regresses cumulative or logit error is "
+    "not a real improvement."
 )
 
 FP8_E4M3_MAX = 448.0
 FP8_E4M3_CODE_SCALE = 512.0
-FP8_CODEBOOK_CORRECTION_NUMERATOR = 10
-FP8_CODEBOOK_CORRECTION_DENOMINATOR = 32
-FP8_CODEBOOK_CORRECTION_ALPHA = (
-    FP8_CODEBOOK_CORRECTION_NUMERATOR / FP8_CODEBOOK_CORRECTION_DENOMINATOR
-)
 INT32_MAX = (1 << 31) - 1
 INT64_ACCUM_LIMIT = (1 << 62) - 1
 BLOCK_M = 16
@@ -61,7 +110,10 @@ def _require_cuda_tensor(x: torch.Tensor, label: str) -> None:
 def _require_gpu() -> str:
     if not torch.cuda.is_available():
         raise SystemExit("A CUDA GPU is required; CPU execution is unsupported.")
-    if not hasattr(torch, "_scaled_mm"):
+    if STUDENT_KERNEL not in SUPPORTED_STUDENT_KERNELS:
+        supported = ", ".join(sorted(SUPPORTED_STUDENT_KERNELS))
+        raise SystemExit(f"unknown IMA_STUDENT_KERNEL={STUDENT_KERNEL!r}; choose one of: {supported}")
+    if TEACHER_KERNEL == "fp8_scaled_mm" and not hasattr(torch, "_scaled_mm"):
         raise SystemExit("torch._scaled_mm is unavailable; real FP8 GEMM cannot run.")
     major, minor = torch.cuda.get_device_capability(0)
     if (major, minor) < (8, 9):
@@ -169,6 +221,7 @@ def _int32_raw_matmul_kernel(
 
 
 def _int32_raw_matmul(activations: torch.Tensor, weight_t: torch.Tensor) -> torch.Tensor:
+    global _ACTIVE_INT32_PROBE
     _require_cuda_tensor(activations, "int32 activation matrix")
     _require_cuda_tensor(weight_t, "int32 weight matrix")
     if activations.dtype != torch.int32 or weight_t.dtype != torch.int32:
@@ -178,6 +231,8 @@ def _int32_raw_matmul(activations: torch.Tensor, weight_t: torch.Tensor) -> torc
     if k_size != k2:
         raise RuntimeError(f"int32 raw matmul shape mismatch: {activations.shape} @ {weight_t.shape}")
     out = torch.empty((m_size, n_size), device=activations.device, dtype=torch.int64)
+    if _ACTIVE_INT32_PROBE is not None:
+        _ACTIVE_INT32_PROBE.count += 1
     _int32_raw_matmul_kernel[(triton.cdiv(m_size, BLOCK_M), triton.cdiv(n_size, BLOCK_N))](
         activations,
         weight_t,
@@ -273,8 +328,24 @@ def _int32_matmul(
     return out
 
 
+def _hopper_qgmma_fp8_scaled_mm(
+    x_fp8: torch.Tensor,
+    x_scale: torch.Tensor,
+    w_fp8: torch.Tensor,
+    w_scale: torch.Tensor,
+) -> torch.Tensor:
+    try:
+        from scripts.hopper_qgmma_teacher import qgmma_fp8_scaled_mm
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "IMA_TEACHER_KERNEL=hopper_qgmma requires scripts/hopper_qgmma_teacher.py "
+            "from this repository checkout."
+        ) from exc
+    return qgmma_fp8_scaled_mm(x_fp8, x_scale, w_fp8, w_scale)
+
+
 class FP8Linear(nn.Module):
-    """Linear backed by real FP8 GEMM through torch._scaled_mm."""
+    """Linear backed by the selected FP8 teacher GEMM."""
 
     def __init__(self, weight: torch.Tensor, weight_scale: torch.Tensor, bias: torch.Tensor | None):
         super().__init__()
@@ -294,13 +365,18 @@ class FP8Linear(nn.Module):
         _require_cuda_tensor(x, "FP8 input")
         in_shape = x.shape
         x_fp8, x_scale = _per_token_fp8(x)
-        y = torch._scaled_mm(
-            x_fp8,
-            self.weight.t(),
-            scale_a=x_scale,
-            scale_b=self.weight_scale.reshape(1, -1),
-            out_dtype=torch.bfloat16,
-        )
+        if TEACHER_KERNEL == "fp8_scaled_mm":
+            y = torch._scaled_mm(
+                x_fp8,
+                self.weight.t(),
+                scale_a=x_scale,
+                scale_b=self.weight_scale.reshape(1, -1),
+                out_dtype=torch.bfloat16,
+            )
+        elif TEACHER_KERNEL in HOPPER_QGMMA_TEACHER_KERNELS:
+            y = _hopper_qgmma_fp8_scaled_mm(x_fp8, x_scale, self.weight, self.weight_scale)
+        else:
+            raise RuntimeError(f"unknown IMA_TEACHER_KERNEL={TEACHER_KERNEL!r}")
         if self.bias is not None:
             y = y + self.bias.to(y.dtype)
         return y.to(x.dtype).reshape(*in_shape[:-1], self.out_features)
@@ -313,8 +389,6 @@ class Int32Linear(nn.Module):
         self,
         weight: torch.Tensor,
         bias: torch.Tensor | None,
-        fp8_weight: torch.Tensor | None = None,
-        fp8_weight_scale: torch.Tensor | None = None,
     ):
         super().__init__()
         _require_cuda_tensor(weight, "int32 weight source")
@@ -322,22 +396,6 @@ class Int32Linear(nn.Module):
         w_i32, w_scale = _per_row_int32(weight, self.qmax)
         self.register_buffer("weight_t", w_i32.t().contiguous(), persistent=False)
         self.register_buffer("weight_scale", w_scale.reshape(1, -1), persistent=False)
-        self.codebook_alpha = 0.0
-        if fp8_weight is not None:
-            if fp8_weight_scale is None:
-                raise RuntimeError("FP8 codebook correction needs per-row weight_scale")
-            if fp8_weight.dtype != torch.float8_e4m3fn:
-                raise RuntimeError(f"FP8 codebook correction needs FP8 weights, got {fp8_weight.dtype}")
-            _require_cuda_tensor(fp8_weight, "FP8 codebook weight")
-            codebook_i32 = _fp8_e4m3_to_int32(fp8_weight.detach())
-            codebook_scale = fp8_weight_scale.detach().to(torch.float32) / FP8_E4M3_CODE_SCALE
-            self.register_buffer(
-                "codebook_weight_t", codebook_i32.t().contiguous(), persistent=False
-            )
-            self.register_buffer(
-                "codebook_weight_scale", codebook_scale.reshape(1, -1), persistent=False
-            )
-            self.codebook_alpha = FP8_CODEBOOK_CORRECTION_ALPHA
         if bias is None:
             self.bias = None
         else:
@@ -350,17 +408,74 @@ class Int32Linear(nn.Module):
         in_shape = x.shape
         x_i32, x_scale = _per_token_int32(x, self.qmax)
         y = _int32_matmul(x_i32, self.weight_t, x_scale, self.weight_scale)
-        if self.codebook_alpha:
-            codebook_x_i32, codebook_x_scale = _per_token_fp8_int32(x)
-            y_codebook = _int32_matmul(
-                codebook_x_i32,
-                self.codebook_weight_t,
-                codebook_x_scale,
-                self.codebook_weight_scale,
-            )
-            y = y + self.codebook_alpha * (y_codebook - y)
         if self.bias is not None:
             y = y + self.bias.to(torch.float32)
+        return y.to(x.dtype).reshape(*in_shape[:-1], self.out_features)
+
+
+class CodebookLinear(nn.Module):
+    """FP8 linear reconstructed by one Freivalds-checkable codebook integer GEMM."""
+
+    def __init__(self, weight: torch.Tensor, weight_scale: torch.Tensor, bias: torch.Tensor | None):
+        super().__init__()
+        if weight.dtype != torch.float8_e4m3fn:
+            raise RuntimeError(f"CodebookLinear needs FP8 weights, got {weight.dtype}")
+        _require_cuda_tensor(weight, "FP8 codebook weight")
+        codebook_i32 = _fp8_e4m3_to_int32(weight.detach())
+        codebook_scale = weight_scale.detach().to(torch.float32) / FP8_E4M3_CODE_SCALE
+        self.register_buffer("weight_t", codebook_i32.t().contiguous(), persistent=False)
+        self.register_buffer("weight_scale", codebook_scale.reshape(1, -1), persistent=False)
+        if bias is None:
+            self.bias = None
+        else:
+            self.register_buffer("bias", bias.detach(), persistent=False)
+        self.in_features = weight.shape[1]
+        self.out_features = weight.shape[0]
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        _require_cuda_tensor(x, "FP8 codebook input")
+        in_shape = x.shape
+        x_i32, x_scale = _per_token_fp8_int32(x)
+        y = _int32_matmul(x_i32, self.weight_t, x_scale, self.weight_scale)
+        if self.bias is not None:
+            y = y + self.bias.to(torch.float32)
+        return y.to(x.dtype).reshape(*in_shape[:-1], self.out_features)
+
+
+class HawkeyeLinear(nn.Module):
+    """FP8 linear reconstructed by direct Hawkeye integer replay."""
+
+    def __init__(self, weight: torch.Tensor, weight_scale: torch.Tensor, bias: torch.Tensor | None):
+        super().__init__()
+        if weight.dtype != torch.float8_e4m3fn:
+            raise RuntimeError(f"HawkeyeLinear needs FP8 weights, got {weight.dtype}")
+        _require_cuda_tensor(weight, "Hawkeye FP8 weight")
+        self.register_buffer("weight", weight.detach().contiguous(), persistent=False)
+        self.register_buffer("weight_scale", weight_scale.detach().to(torch.float32), persistent=False)
+        if bias is None:
+            self.bias = None
+        else:
+            self.register_buffer("bias", bias.detach(), persistent=False)
+        self.in_features = weight.shape[1]
+        self.out_features = weight.shape[0]
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        _require_cuda_tensor(x, "Hawkeye input")
+        in_shape = x.shape
+        x_fp8, x_scale = _per_token_fp8(x)
+        y, _stats = hawkeye_fp8_sum(
+            x_fp8,
+            x_scale,
+            self.weight,
+            self.weight_scale,
+            products_per_group=HAWKEYE_PRODUCTS_PER_GROUP,
+            internal_width=HAWKEYE_INTERNAL_WIDTH,
+            zero_exponent=HAWKEYE_ZERO_EXPONENT,
+            block_m=HAWKEYE_BLOCK_M,
+            block_n=HAWKEYE_BLOCK_N,
+        )
+        if self.bias is not None:
+            y = y + self.bias.to(y.dtype)
         return y.to(x.dtype).reshape(*in_shape[:-1], self.out_features)
 
 
@@ -402,18 +517,19 @@ def _replace_fp8_linears(model: nn.Module) -> list[str]:
 
 
 def _replace_int32_linears(model: nn.Module) -> list[str]:
+    if STUDENT_KERNEL not in SUPPORTED_STUDENT_KERNELS:
+        supported = ", ".join(sorted(SUPPORTED_STUDENT_KERNELS))
+        raise RuntimeError(f"unknown IMA_STUDENT_KERNEL={STUDENT_KERNEL!r}; choose one of: {supported}")
     replacements: list[tuple[str, nn.Linear]] = []
     for name, module in model.named_modules():
         if isinstance(module, nn.Linear):
             replacements.append((name, module))
     for name, module in replacements:
         if module.weight.dtype == torch.float8_e4m3fn and hasattr(module, "weight_scale"):
-            replacement = Int32Linear(
-                _dequantized_weight(module),
-                module.bias,
-                fp8_weight=module.weight,
-                fp8_weight_scale=module.weight_scale,
-            )
+            if STUDENT_KERNEL == "hawkeye":
+                replacement = HawkeyeLinear(module.weight, module.weight_scale, module.bias)
+            else:
+                replacement = CodebookLinear(module.weight, module.weight_scale, module.bias)
         else:
             replacement = Int32Linear(_dequantized_weight(module), module.bias)
         _set_submodule(model, name, replacement)
@@ -548,7 +664,7 @@ def _load_integerized(device: str) -> tuple[nn.Module, list[str]]:
     model = AutoModelForCausalLM.from_pretrained(MODEL_ID).to(device)
     _disable_compressed_tensor_hooks(model)
     replaced = _replace_int32_linears(model)
-    print(f"[difr] integerized int32 linears={len(replaced)}")
+    print(f"[difr] integerized linears={len(replaced)}")
     return _freeze(model), replaced
 
 
@@ -564,17 +680,23 @@ def main() -> None:
     layer_name_set = set(layer_names)
 
     ref_captures, ref_handles = _install_hooks(reference, layer_name_set)
-    with torch.inference_mode(), _KernelProbe("_scaled_mm") as fp8_probe:
-        reference_output = reference(input_ids)
+    fp8_probe_count = 0
+    if TEACHER_KERNEL == "fp8_scaled_mm":
+        with torch.inference_mode(), _KernelProbe("_scaled_mm") as fp8_probe:
+            reference_output = reference(input_ids)
+        fp8_probe_count = fp8_probe.count
+        if fp8_probe_count == 0:
+            raise RuntimeError("Reference forward did not call torch._scaled_mm.")
+    else:
+        with torch.inference_mode():
+            reference_output = reference(input_ids)
     _remove_hooks(ref_handles)
-    if fp8_probe.count == 0:
-        raise RuntimeError("Reference forward did not call torch._scaled_mm.")
 
     int_captures, int_handles = _install_hooks(integerized, layer_name_set)
     with torch.inference_mode(), _Int32KernelProbe() as int_probe:
         integerized_output = integerized(input_ids)
     _remove_hooks(int_handles)
-    if int_probe.count == 0:
+    if STUDENT_KERNEL == "codebook" and int_probe.count == 0:
         raise RuntimeError("Integerized forward did not launch the int32 CUDA kernel.")
 
     rows = []
@@ -586,7 +708,7 @@ def main() -> None:
         with torch.inference_mode(), _Int32KernelProbe() as iso_probe:
             isolated_output = int_layer(ref_captures[name].input)
         isolated_int32_kernel_calls += iso_probe.count
-        if iso_probe.count == 0:
+        if not isinstance(int_layer, HawkeyeLinear) and iso_probe.count == 0:
             raise RuntimeError(f"Isolated layer {name} did not launch the int32 CUDA kernel.")
         rows.append(
             {
@@ -606,13 +728,18 @@ def main() -> None:
         "model": MODEL_ID,
         "prompt_tokens": int(input_ids.shape[1]),
         "device": torch.cuda.get_device_name(0),
-        "integerized_kernel": "triton_int32_x_int32_to_int64",
-        "integerized_correction": "10/32 * (fp8_codebook_int_product - high_precision_int_product)",
+        "integerized_kernel": STUDENT_KERNEL,
+        "teacher_kernel": TEACHER_KERNEL,
+        "integerized_path": (
+            "single FP8-codebook integer GEMM"
+            if STUDENT_KERNEL == "codebook"
+            else "direct Hawkeye FP8 accumulator replay"
+        ),
         "integerized_qmax": "per-layer floor(sqrt((2^62 - 1) / in_features))",
         "runtime_s": time.time() - started,
         "kernel_calls": {
-            "reference_scaled_mm": fp8_probe.count,
-            "integerized_int32_kernel": int_probe.count,
+            "reference_scaled_mm": fp8_probe_count,
+            "integerized_checkable_int32_kernel": int_probe.count,
             "isolated_int32_kernel": isolated_int32_kernel_calls,
         },
         "total_error": _l2_stats(reference_logits, integerized_logits),

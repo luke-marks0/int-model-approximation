@@ -1,0 +1,3919 @@
+{
+  "model": "RedHatAI/Qwen2.5-0.5B-FP8-dynamic",
+  "prompt_tokens": 745,
+  "device": "NVIDIA L4",
+  "integerized_kernel": "triton_int32_x_int32_to_int64",
+  "integerized_correction": "10/32 * (fp8_codebook_int_product - high_precision_int_product)",
+  "integerized_qmax": "per-layer floor(sqrt((2^62 - 1) / in_features))",
+  "runtime_s": 22.213849782943726,
+  "kernel_calls": {
+    "reference_scaled_mm": 168,
+    "integerized_int32_kernel": 337,
+    "isolated_int32_kernel": 337
+  },
+  "total_error": {
+    "l2": 2047.72509765625,
+    "per_position_mean": 69.308349609375,
+    "per_position_p50": 62.20071029663086,
+    "per_position_p99": 156.88279724121094,
+    "per_position_max": 509.83245849609375
+  },
+  "logit_error": {
+    "logit_l2": 2047.7252197265625,
+    "logit_l2_mean": 69.308349609375,
+    "logit_l2_p99": 156.88279724121094,
+    "difr_score_mean": 0.008427643217146397,
+    "difr_score_p99": 0.23956842720508575,
+    "top1_similarity": 0.9436241984367371,
+    "top5_similarity": 0.9404026865959167
+  },
+  "layers": [
+    {
+      "name": "model.layers.0.self_attn.q_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 12.09689712524414,
+        "per_position_mean": 0.4411790072917938,
+        "per_position_p50": 0.4389638900756836,
+        "per_position_p99": 0.5524908900260925,
+        "per_position_max": 0.6707441806793213
+      },
+      "cumulative_error": {
+        "l2": 12.09689712524414,
+        "per_position_mean": 0.4411790072917938,
+        "per_position_p50": 0.4389638900756836,
+        "per_position_p99": 0.5524908900260925,
+        "per_position_max": 0.6707441806793213
+      }
+    },
+    {
+      "name": "model.layers.0.self_attn.k_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 16.83451271057129,
+        "per_position_mean": 0.6103760600090027,
+        "per_position_p50": 0.611621618270874,
+        "per_position_p99": 0.7982804179191589,
+        "per_position_max": 0.8176240921020508
+      },
+      "cumulative_error": {
+        "l2": 16.83451271057129,
+        "per_position_mean": 0.6103760600090027,
+        "per_position_p50": 0.611621618270874,
+        "per_position_p99": 0.7982804179191589,
+        "per_position_max": 0.8176240921020508
+      }
+    },
+    {
+      "name": "model.layers.0.self_attn.v_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 0.16942578554153442,
+        "per_position_mean": 0.006081665400415659,
+        "per_position_p50": 0.0057691531255841255,
+        "per_position_p99": 0.010044864378869534,
+        "per_position_max": 0.01011948473751545
+      },
+      "cumulative_error": {
+        "l2": 0.16942578554153442,
+        "per_position_mean": 0.006081665400415659,
+        "per_position_p50": 0.0057691531255841255,
+        "per_position_p99": 0.010044864378869534,
+        "per_position_max": 0.01011948473751545
+      }
+    },
+    {
+      "name": "model.layers.0.self_attn.o_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 0.0963834822177887,
+        "per_position_mean": 0.003437626175582409,
+        "per_position_p50": 0.003349248319864273,
+        "per_position_p99": 0.005739495623856783,
+        "per_position_max": 0.007341842632740736
+      },
+      "cumulative_error": {
+        "l2": 0.25183284282684326,
+        "per_position_mean": 0.009077921509742737,
+        "per_position_p50": 0.008870520628988743,
+        "per_position_p99": 0.013929080218076706,
+        "per_position_max": 0.016130071133375168
+      }
+    },
+    {
+      "name": "model.layers.0.mlp.gate_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 14.073328971862793,
+        "per_position_mean": 0.509804904460907,
+        "per_position_p50": 0.5110871195793152,
+        "per_position_p99": 0.686790406703949,
+        "per_position_max": 0.7489287853240967
+      },
+      "cumulative_error": {
+        "l2": 31.74046516418457,
+        "per_position_mean": 1.147183895111084,
+        "per_position_p50": 1.1153910160064697,
+        "per_position_p99": 1.6714178323745728,
+        "per_position_max": 2.0302093029022217
+      }
+    },
+    {
+      "name": "model.layers.0.mlp.up_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 10.432807922363281,
+        "per_position_mean": 0.379178911447525,
+        "per_position_p50": 0.3857020139694214,
+        "per_position_p99": 0.46314117312431335,
+        "per_position_max": 0.4830147922039032
+      },
+      "cumulative_error": {
+        "l2": 17.2968807220459,
+        "per_position_mean": 0.6298671364784241,
+        "per_position_p50": 0.6317241787910461,
+        "per_position_p99": 0.8115335702896118,
+        "per_position_max": 0.8835291862487793
+      }
+    },
+    {
+      "name": "model.layers.0.mlp.down_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 30791658.0,
+      "isolated_error": {
+        "l2": 1.653673768043518,
+        "per_position_mean": 0.05753481760621071,
+        "per_position_p50": 0.058616992086172104,
+        "per_position_p99": 0.10029716789722443,
+        "per_position_max": 0.11284999549388885
+      },
+      "cumulative_error": {
+        "l2": 4.390028476715088,
+        "per_position_mean": 0.15300284326076508,
+        "per_position_p50": 0.14891567826271057,
+        "per_position_p99": 0.26905977725982666,
+        "per_position_max": 0.3041059076786041
+      }
+    },
+    {
+      "name": "model.layers.1.self_attn.q_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 8.063261985778809,
+        "per_position_mean": 0.2932206094264984,
+        "per_position_p50": 0.28837642073631287,
+        "per_position_p99": 0.3968408703804016,
+        "per_position_max": 0.4469900131225586
+      },
+      "cumulative_error": {
+        "l2": 21.875350952148438,
+        "per_position_mean": 0.7877294421195984,
+        "per_position_p50": 0.7748305201530457,
+        "per_position_p99": 1.2231173515319824,
+        "per_position_max": 1.4257844686508179
+      }
+    },
+    {
+      "name": "model.layers.1.self_attn.k_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 11.321595191955566,
+        "per_position_mean": 0.40165767073631287,
+        "per_position_p50": 0.391011118888855,
+        "per_position_p99": 0.6183926463127136,
+        "per_position_max": 0.6455593109130859
+      },
+      "cumulative_error": {
+        "l2": 15.686455726623535,
+        "per_position_mean": 0.5664603114128113,
+        "per_position_p50": 0.5610420107841492,
+        "per_position_p99": 0.8006637692451477,
+        "per_position_max": 0.8856475353240967
+      }
+    },
+    {
+      "name": "model.layers.1.self_attn.v_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 1.1339949369430542,
+        "per_position_mean": 0.041285790503025055,
+        "per_position_p50": 0.041313622146844864,
+        "per_position_p99": 0.05140490084886551,
+        "per_position_max": 0.05467133969068527
+      },
+      "cumulative_error": {
+        "l2": 2.5817835330963135,
+        "per_position_mean": 0.09334322065114975,
+        "per_position_p50": 0.09289664030075073,
+        "per_position_p99": 0.1334046870470047,
+        "per_position_max": 0.1413021981716156
+      }
+    },
+    {
+      "name": "model.layers.1.self_attn.o_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 0.8410892486572266,
+        "per_position_mean": 0.030141426250338554,
+        "per_position_p50": 0.029338421300053596,
+        "per_position_p99": 0.0471900999546051,
+        "per_position_max": 0.06329166144132614
+      },
+      "cumulative_error": {
+        "l2": 2.4218814373016357,
+        "per_position_mean": 0.08721499890089035,
+        "per_position_p50": 0.08497411012649536,
+        "per_position_p99": 0.13442282378673553,
+        "per_position_max": 0.15948711335659027
+      }
+    },
+    {
+      "name": "model.layers.1.mlp.gate_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 17.270851135253906,
+        "per_position_mean": 0.6266613006591797,
+        "per_position_p50": 0.6282191276550293,
+        "per_position_p99": 0.853015661239624,
+        "per_position_max": 1.0016735792160034
+      },
+      "cumulative_error": {
+        "l2": 46.02546310424805,
+        "per_position_mean": 1.66743004322052,
+        "per_position_p50": 1.6288214921951294,
+        "per_position_p99": 2.4121553897857666,
+        "per_position_max": 2.842219591140747
+      }
+    },
+    {
+      "name": "model.layers.1.mlp.up_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 11.872237205505371,
+        "per_position_mean": 0.43033722043037415,
+        "per_position_p50": 0.4359875023365021,
+        "per_position_p99": 0.5839303731918335,
+        "per_position_max": 0.6068673729896545
+      },
+      "cumulative_error": {
+        "l2": 30.837158203125,
+        "per_position_mean": 1.1166253089904785,
+        "per_position_p50": 1.106004238128662,
+        "per_position_p99": 1.6595065593719482,
+        "per_position_max": 1.9200844764709473
+      }
+    },
+    {
+      "name": "model.layers.1.mlp.down_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 30791658.0,
+      "isolated_error": {
+        "l2": 1.471949577331543,
+        "per_position_mean": 0.05263796076178551,
+        "per_position_p50": 0.05101894214749336,
+        "per_position_p99": 0.08979933708906174,
+        "per_position_max": 0.10393224656581879
+      },
+      "cumulative_error": {
+        "l2": 5.604780197143555,
+        "per_position_mean": 0.19930601119995117,
+        "per_position_p50": 0.19107496738433838,
+        "per_position_p99": 0.3644998371601105,
+        "per_position_max": 0.4079943299293518
+      }
+    },
+    {
+      "name": "model.layers.2.self_attn.q_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 9.31702709197998,
+        "per_position_mean": 0.33827337622642517,
+        "per_position_p50": 0.3388946056365967,
+        "per_position_p99": 0.4408155381679535,
+        "per_position_max": 0.4939233064651489
+      },
+      "cumulative_error": {
+        "l2": 23.99688720703125,
+        "per_position_mean": 0.8644354343414307,
+        "per_position_p50": 0.845782995223999,
+        "per_position_p99": 1.3641395568847656,
+        "per_position_max": 1.5320730209350586
+      }
+    },
+    {
+      "name": "model.layers.2.self_attn.k_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 8.175376892089844,
+        "per_position_mean": 0.2973942756652832,
+        "per_position_p50": 0.297776460647583,
+        "per_position_p99": 0.3738120198249817,
+        "per_position_max": 0.4023624658584595
+      },
+      "cumulative_error": {
+        "l2": 14.29530143737793,
+        "per_position_mean": 0.5165179371833801,
+        "per_position_p50": 0.5096702575683594,
+        "per_position_p99": 0.7738254070281982,
+        "per_position_max": 0.8977020978927612
+      }
+    },
+    {
+      "name": "model.layers.2.self_attn.v_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 1.6044368743896484,
+        "per_position_mean": 0.058054368942976,
+        "per_position_p50": 0.05920099467039108,
+        "per_position_p99": 0.07570228725671768,
+        "per_position_max": 0.082310251891613
+      },
+      "cumulative_error": {
+        "l2": 3.7445526123046875,
+        "per_position_mean": 0.13476549088954926,
+        "per_position_p50": 0.13265065848827362,
+        "per_position_p99": 0.21427005529403687,
+        "per_position_max": 0.24795594811439514
+      }
+    },
+    {
+      "name": "model.layers.2.self_attn.o_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 1.0590951442718506,
+        "per_position_mean": 0.037362854927778244,
+        "per_position_p50": 0.03517473116517067,
+        "per_position_p99": 0.0653069019317627,
+        "per_position_max": 0.07949449867010117
+      },
+      "cumulative_error": {
+        "l2": 3.4308104515075684,
+        "per_position_mean": 0.12124960124492645,
+        "per_position_p50": 0.11690513044595718,
+        "per_position_p99": 0.23386916518211365,
+        "per_position_max": 0.2620594799518585
+      }
+    },
+    {
+      "name": "model.layers.2.mlp.gate_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 19.82464027404785,
+        "per_position_mean": 0.7145536541938782,
+        "per_position_p50": 0.698605477809906,
+        "per_position_p99": 1.0623407363891602,
+        "per_position_max": 1.2081056833267212
+      },
+      "cumulative_error": {
+        "l2": 57.49359893798828,
+        "per_position_mean": 2.053386688232422,
+        "per_position_p50": 1.9361896514892578,
+        "per_position_p99": 3.5687432289123535,
+        "per_position_max": 4.23624849319458
+      }
+    },
+    {
+      "name": "model.layers.2.mlp.up_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 13.622085571289062,
+        "per_position_mean": 0.49152272939682007,
+        "per_position_p50": 0.4847889840602875,
+        "per_position_p99": 0.7110151648521423,
+        "per_position_max": 0.7719994187355042
+      },
+      "cumulative_error": {
+        "l2": 39.4874267578125,
+        "per_position_mean": 1.4144564867019653,
+        "per_position_p50": 1.3355822563171387,
+        "per_position_p99": 2.4099056720733643,
+        "per_position_max": 2.7589194774627686
+      }
+    },
+    {
+      "name": "model.layers.2.mlp.down_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 30791658.0,
+      "isolated_error": {
+        "l2": 2.412712335586548,
+        "per_position_mean": 0.06664406508207321,
+        "per_position_p50": 0.059156496077775955,
+        "per_position_p99": 0.1358693540096283,
+        "per_position_max": 1.5430197715759277
+      },
+      "cumulative_error": {
+        "l2": 8.095268249511719,
+        "per_position_mean": 0.27527523040771484,
+        "per_position_p50": 0.24630184471607208,
+        "per_position_p99": 0.6095348596572876,
+        "per_position_max": 1.792537808418274
+      }
+    },
+    {
+      "name": "model.layers.3.self_attn.q_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 11.380146980285645,
+        "per_position_mean": 0.41237491369247437,
+        "per_position_p50": 0.41251158714294434,
+        "per_position_p99": 0.5447596311569214,
+        "per_position_max": 0.6172720789909363
+      },
+      "cumulative_error": {
+        "l2": 28.817838668823242,
+        "per_position_mean": 1.0361336469650269,
+        "per_position_p50": 1.0136030912399292,
+        "per_position_p99": 1.671225905418396,
+        "per_position_max": 2.0472466945648193
+      }
+    },
+    {
+      "name": "model.layers.3.self_attn.k_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 6.240025520324707,
+        "per_position_mean": 0.2255626767873764,
+        "per_position_p50": 0.22668521106243134,
+        "per_position_p99": 0.31131866574287415,
+        "per_position_max": 0.33186787366867065
+      },
+      "cumulative_error": {
+        "l2": 15.45987319946289,
+        "per_position_mean": 0.5533203482627869,
+        "per_position_p50": 0.5431587100028992,
+        "per_position_p99": 0.9308826923370361,
+        "per_position_max": 1.2539689540863037
+      }
+    },
+    {
+      "name": "model.layers.3.self_attn.v_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 1.97360098361969,
+        "per_position_mean": 0.07138185203075409,
+        "per_position_p50": 0.07080046087503433,
+        "per_position_p99": 0.09782234579324722,
+        "per_position_max": 0.11380372196435928
+      },
+      "cumulative_error": {
+        "l2": 6.510773181915283,
+        "per_position_mean": 0.2318592071533203,
+        "per_position_p50": 0.22125375270843506,
+        "per_position_p99": 0.4267056882381439,
+        "per_position_max": 0.47408929467201233
+      }
+    },
+    {
+      "name": "model.layers.3.self_attn.o_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 1.051843523979187,
+        "per_position_mean": 0.037113871425390244,
+        "per_position_p50": 0.03540496900677681,
+        "per_position_p99": 0.0666017010807991,
+        "per_position_max": 0.07543601840734482
+      },
+      "cumulative_error": {
+        "l2": 4.332181453704834,
+        "per_position_mean": 0.1492554247379303,
+        "per_position_p50": 0.13863301277160645,
+        "per_position_p99": 0.3524707853794098,
+        "per_position_max": 0.5208489298820496
+      }
+    },
+    {
+      "name": "model.layers.3.mlp.gate_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 21.766881942749023,
+        "per_position_mean": 0.7844009399414062,
+        "per_position_p50": 0.7618928551673889,
+        "per_position_p99": 1.1775344610214233,
+        "per_position_max": 1.6921072006225586
+      },
+      "cumulative_error": {
+        "l2": 69.54840850830078,
+        "per_position_mean": 2.463538646697998,
+        "per_position_p50": 2.3165125846862793,
+        "per_position_p99": 4.811305522918701,
+        "per_position_max": 5.263758182525635
+      }
+    },
+    {
+      "name": "model.layers.3.mlp.up_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 15.188810348510742,
+        "per_position_mean": 0.5472953915596008,
+        "per_position_p50": 0.5314295887947083,
+        "per_position_p99": 0.8095530867576599,
+        "per_position_max": 0.8721573352813721
+      },
+      "cumulative_error": {
+        "l2": 51.871368408203125,
+        "per_position_mean": 1.8362886905670166,
+        "per_position_p50": 1.7132515907287598,
+        "per_position_p99": 3.5262200832366943,
+        "per_position_max": 3.874706745147705
+      }
+    },
+    {
+      "name": "model.layers.3.mlp.down_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 30791658.0,
+      "isolated_error": {
+        "l2": 5.497040271759033,
+        "per_position_mean": 0.08217466622591019,
+        "per_position_p50": 0.0715169832110405,
+        "per_position_p99": 0.1344132423400879,
+        "per_position_max": 5.066158771514893
+      },
+      "cumulative_error": {
+        "l2": 13.484620094299316,
+        "per_position_mean": 0.38413357734680176,
+        "per_position_p50": 0.3409457802772522,
+        "per_position_p99": 0.8481309413909912,
+        "per_position_max": 8.100431442260742
+      }
+    },
+    {
+      "name": "model.layers.4.self_attn.q_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 10.662607192993164,
+        "per_position_mean": 0.3862287700176239,
+        "per_position_p50": 0.38017404079437256,
+        "per_position_p99": 0.5594205260276794,
+        "per_position_max": 0.6175092458724976
+      },
+      "cumulative_error": {
+        "l2": 31.759496688842773,
+        "per_position_mean": 1.1376186609268188,
+        "per_position_p50": 1.0976622104644775,
+        "per_position_p99": 1.9073514938354492,
+        "per_position_max": 2.2347006797790527
+      }
+    },
+    {
+      "name": "model.layers.4.self_attn.k_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 5.1470441818237305,
+        "per_position_mean": 0.18609951436519623,
+        "per_position_p50": 0.18274365365505219,
+        "per_position_p99": 0.2710949182510376,
+        "per_position_max": 0.3253658413887024
+      },
+      "cumulative_error": {
+        "l2": 14.828065872192383,
+        "per_position_mean": 0.5296953916549683,
+        "per_position_p50": 0.5114209651947021,
+        "per_position_p99": 0.913013756275177,
+        "per_position_max": 1.0794920921325684
+      }
+    },
+    {
+      "name": "model.layers.4.self_attn.v_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 2.4325926303863525,
+        "per_position_mean": 0.08799148350954056,
+        "per_position_p50": 0.08728043735027313,
+        "per_position_p99": 0.1201295405626297,
+        "per_position_max": 0.1323648989200592
+      },
+      "cumulative_error": {
+        "l2": 10.616267204284668,
+        "per_position_mean": 0.375448614358902,
+        "per_position_p50": 0.3541586101055145,
+        "per_position_p99": 0.7059641480445862,
+        "per_position_max": 0.9253981113433838
+      }
+    },
+    {
+      "name": "model.layers.4.self_attn.o_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 1.5807589292526245,
+        "per_position_mean": 0.05710756033658981,
+        "per_position_p50": 0.05616995692253113,
+        "per_position_p99": 0.08619488775730133,
+        "per_position_max": 0.09731805324554443
+      },
+      "cumulative_error": {
+        "l2": 6.219315052032471,
+        "per_position_mean": 0.2219875007867813,
+        "per_position_p50": 0.21618403494358063,
+        "per_position_p99": 0.3854075074195862,
+        "per_position_max": 0.5522810220718384
+      }
+    },
+    {
+      "name": "model.layers.4.mlp.gate_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 23.244693756103516,
+        "per_position_mean": 0.8416256904602051,
+        "per_position_p50": 0.8237491250038147,
+        "per_position_p99": 1.2042542695999146,
+        "per_position_max": 1.6104674339294434
+      },
+      "cumulative_error": {
+        "l2": 77.64771270751953,
+        "per_position_mean": 2.7737274169921875,
+        "per_position_p50": 2.623417615890503,
+        "per_position_p99": 4.985506057739258,
+        "per_position_max": 6.6092376708984375
+      }
+    },
+    {
+      "name": "model.layers.4.mlp.up_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 15.991222381591797,
+        "per_position_mean": 0.5810728073120117,
+        "per_position_p50": 0.5733540058135986,
+        "per_position_p99": 0.7675420641899109,
+        "per_position_max": 0.8273724317550659
+      },
+      "cumulative_error": {
+        "l2": 58.00727081298828,
+        "per_position_mean": 2.063551425933838,
+        "per_position_p50": 1.932597279548645,
+        "per_position_p99": 3.8943493366241455,
+        "per_position_max": 4.8048295974731445
+      }
+    },
+    {
+      "name": "model.layers.4.mlp.down_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 30791658.0,
+      "isolated_error": {
+        "l2": 2.3687024116516113,
+        "per_position_mean": 0.08531196415424347,
+        "per_position_p50": 0.0826050192117691,
+        "per_position_p99": 0.13435955345630646,
+        "per_position_max": 0.1723727434873581
+      },
+      "cumulative_error": {
+        "l2": 12.251760482788086,
+        "per_position_mean": 0.43136781454086304,
+        "per_position_p50": 0.4012380838394165,
+        "per_position_p99": 0.8828997611999512,
+        "per_position_max": 1.0562870502471924
+      }
+    },
+    {
+      "name": "model.layers.5.self_attn.q_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 11.503388404846191,
+        "per_position_mean": 0.4177596867084503,
+        "per_position_p50": 0.4098363518714905,
+        "per_position_p99": 0.5663315057754517,
+        "per_position_max": 0.7571184039115906
+      },
+      "cumulative_error": {
+        "l2": 39.15999984741211,
+        "per_position_mean": 1.4072132110595703,
+        "per_position_p50": 1.373573660850525,
+        "per_position_p99": 2.3208224773406982,
+        "per_position_max": 2.886317729949951
+      }
+    },
+    {
+      "name": "model.layers.5.self_attn.k_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 5.390694618225098,
+        "per_position_mean": 0.19507025182247162,
+        "per_position_p50": 0.19267770648002625,
+        "per_position_p99": 0.2757043242454529,
+        "per_position_max": 0.33453455567359924
+      },
+      "cumulative_error": {
+        "l2": 17.338970184326172,
+        "per_position_mean": 0.6209018230438232,
+        "per_position_p50": 0.6008094549179077,
+        "per_position_p99": 1.0376888513565063,
+        "per_position_max": 1.3679802417755127
+      }
+    },
+    {
+      "name": "model.layers.5.self_attn.v_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 2.6665751934051514,
+        "per_position_mean": 0.09687413275241852,
+        "per_position_p50": 0.09706001728773117,
+        "per_position_p99": 0.1264849454164505,
+        "per_position_max": 0.14426986873149872
+      },
+      "cumulative_error": {
+        "l2": 11.079773902893066,
+        "per_position_mean": 0.39515629410743713,
+        "per_position_p50": 0.3752380311489105,
+        "per_position_p99": 0.7097448706626892,
+        "per_position_max": 0.9331803321838379
+      }
+    },
+    {
+      "name": "model.layers.5.self_attn.o_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 1.4795490503311157,
+        "per_position_mean": 0.05300894379615784,
+        "per_position_p50": 0.05140232667326927,
+        "per_position_p99": 0.08345477283000946,
+        "per_position_max": 0.10220322012901306
+      },
+      "cumulative_error": {
+        "l2": 6.198118209838867,
+        "per_position_mean": 0.220346137881279,
+        "per_position_p50": 0.2116236537694931,
+        "per_position_p99": 0.3944397270679474,
+        "per_position_max": 0.47467243671417236
+      }
+    },
+    {
+      "name": "model.layers.5.mlp.gate_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 33.03078079223633,
+        "per_position_mean": 1.1905970573425293,
+        "per_position_p50": 1.151018500328064,
+        "per_position_p99": 1.839948058128357,
+        "per_position_max": 2.338667392730713
+      },
+      "cumulative_error": {
+        "l2": 104.30618286132812,
+        "per_position_mean": 3.743880271911621,
+        "per_position_p50": 3.576629400253296,
+        "per_position_p99": 6.5069499015808105,
+        "per_position_max": 8.209360122680664
+      }
+    },
+    {
+      "name": "model.layers.5.mlp.up_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 18.138355255126953,
+        "per_position_mean": 0.661553680896759,
+        "per_position_p50": 0.6616809368133545,
+        "per_position_p99": 0.8033813238143921,
+        "per_position_max": 0.8566591739654541
+      },
+      "cumulative_error": {
+        "l2": 67.53440856933594,
+        "per_position_mean": 2.4212145805358887,
+        "per_position_p50": 2.287630081176758,
+        "per_position_p99": 4.390712261199951,
+        "per_position_max": 5.418577671051025
+      }
+    },
+    {
+      "name": "model.layers.5.mlp.down_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 30791658.0,
+      "isolated_error": {
+        "l2": 2.5221619606018066,
+        "per_position_mean": 0.09133565425872803,
+        "per_position_p50": 0.08873039484024048,
+        "per_position_p99": 0.14074932038784027,
+        "per_position_max": 0.17140093445777893
+      },
+      "cumulative_error": {
+        "l2": 13.420143127441406,
+        "per_position_mean": 0.4769638776779175,
+        "per_position_p50": 0.45114073157310486,
+        "per_position_p99": 0.9089560508728027,
+        "per_position_max": 1.0558112859725952
+      }
+    },
+    {
+      "name": "model.layers.6.self_attn.q_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 10.425591468811035,
+        "per_position_mean": 0.37788596749305725,
+        "per_position_p50": 0.3719790577888489,
+        "per_position_p99": 0.5350709557533264,
+        "per_position_max": 0.6616373658180237
+      },
+      "cumulative_error": {
+        "l2": 36.78566360473633,
+        "per_position_mean": 1.3163400888442993,
+        "per_position_p50": 1.269517421722412,
+        "per_position_p99": 2.3569188117980957,
+        "per_position_max": 2.9681127071380615
+      }
+    },
+    {
+      "name": "model.layers.6.self_attn.k_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 4.711106777191162,
+        "per_position_mean": 0.1709059774875641,
+        "per_position_p50": 0.16961434483528137,
+        "per_position_p99": 0.23689298331737518,
+        "per_position_max": 0.2802387475967407
+      },
+      "cumulative_error": {
+        "l2": 16.965648651123047,
+        "per_position_mean": 0.6028247475624084,
+        "per_position_p50": 0.575827956199646,
+        "per_position_p99": 1.203685998916626,
+        "per_position_max": 1.501784324645996
+      }
+    },
+    {
+      "name": "model.layers.6.self_attn.v_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 2.4168074131011963,
+        "per_position_mean": 0.08747608214616776,
+        "per_position_p50": 0.0859571099281311,
+        "per_position_p99": 0.12928254902362823,
+        "per_position_max": 0.14776434004306793
+      },
+      "cumulative_error": {
+        "l2": 9.491414070129395,
+        "per_position_mean": 0.3390064835548401,
+        "per_position_p50": 0.32683539390563965,
+        "per_position_p99": 0.6272821426391602,
+        "per_position_max": 0.7307508587837219
+      }
+    },
+    {
+      "name": "model.layers.6.self_attn.o_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 1.5683807134628296,
+        "per_position_mean": 0.05633843317627907,
+        "per_position_p50": 0.05585821717977524,
+        "per_position_p99": 0.08840455859899521,
+        "per_position_max": 0.10206916183233261
+      },
+      "cumulative_error": {
+        "l2": 6.2050628662109375,
+        "per_position_mean": 0.2195311337709427,
+        "per_position_p50": 0.20862868428230286,
+        "per_position_p99": 0.41845065355300903,
+        "per_position_max": 0.5718792676925659
+      }
+    },
+    {
+      "name": "model.layers.6.mlp.gate_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 22.22989845275879,
+        "per_position_mean": 0.807231605052948,
+        "per_position_p50": 0.8003079295158386,
+        "per_position_p99": 1.1264376640319824,
+        "per_position_max": 1.223925232887268
+      },
+      "cumulative_error": {
+        "l2": 80.36868286132812,
+        "per_position_mean": 2.873471736907959,
+        "per_position_p50": 2.738466501235962,
+        "per_position_p99": 4.999420642852783,
+        "per_position_max": 6.212899684906006
+      }
+    },
+    {
+      "name": "model.layers.6.mlp.up_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 16.567049026489258,
+        "per_position_mean": 0.6026197075843811,
+        "per_position_p50": 0.6013321876525879,
+        "per_position_p99": 0.7765604853630066,
+        "per_position_max": 0.8459718823432922
+      },
+      "cumulative_error": {
+        "l2": 65.70169067382812,
+        "per_position_mean": 2.3474478721618652,
+        "per_position_p50": 2.2287471294403076,
+        "per_position_p99": 4.146289825439453,
+        "per_position_max": 4.9343719482421875
+      }
+    },
+    {
+      "name": "model.layers.6.mlp.down_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 30791658.0,
+      "isolated_error": {
+        "l2": 2.5153250694274902,
+        "per_position_mean": 0.09063494950532913,
+        "per_position_p50": 0.08953108638525009,
+        "per_position_p99": 0.1388797014951706,
+        "per_position_max": 0.17656733095645905
+      },
+      "cumulative_error": {
+        "l2": 14.12539291381836,
+        "per_position_mean": 0.49943622946739197,
+        "per_position_p50": 0.468860924243927,
+        "per_position_p99": 0.9593433141708374,
+        "per_position_max": 1.1376476287841797
+      }
+    },
+    {
+      "name": "model.layers.7.self_attn.q_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 12.113409996032715,
+        "per_position_mean": 0.4398350715637207,
+        "per_position_p50": 0.4326303005218506,
+        "per_position_p99": 0.595474123954773,
+        "per_position_max": 0.7077232003211975
+      },
+      "cumulative_error": {
+        "l2": 36.9603271484375,
+        "per_position_mean": 1.32448148727417,
+        "per_position_p50": 1.2766207456588745,
+        "per_position_p99": 2.2304775714874268,
+        "per_position_max": 2.9035723209381104
+      }
+    },
+    {
+      "name": "model.layers.7.self_attn.k_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 5.919848918914795,
+        "per_position_mean": 0.2144695669412613,
+        "per_position_p50": 0.21307222545146942,
+        "per_position_p99": 0.30131611227989197,
+        "per_position_max": 0.36852148175239563
+      },
+      "cumulative_error": {
+        "l2": 17.02945327758789,
+        "per_position_mean": 0.6076550483703613,
+        "per_position_p50": 0.5852227210998535,
+        "per_position_p99": 1.0907405614852905,
+        "per_position_max": 1.4685533046722412
+      }
+    },
+    {
+      "name": "model.layers.7.self_attn.v_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 2.4584453105926514,
+        "per_position_mean": 0.08938037604093552,
+        "per_position_p50": 0.08863749355077744,
+        "per_position_p99": 0.11943531036376953,
+        "per_position_max": 0.13262493908405304
+      },
+      "cumulative_error": {
+        "l2": 10.119424819946289,
+        "per_position_mean": 0.35974597930908203,
+        "per_position_p50": 0.33902707695961,
+        "per_position_p99": 0.6771602034568787,
+        "per_position_max": 0.8758057951927185
+      }
+    },
+    {
+      "name": "model.layers.7.self_attn.o_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 1.7127310037612915,
+        "per_position_mean": 0.06034774333238602,
+        "per_position_p50": 0.05924924835562706,
+        "per_position_p99": 0.10930564254522324,
+        "per_position_max": 0.12185759842395782
+      },
+      "cumulative_error": {
+        "l2": 7.46790885925293,
+        "per_position_mean": 0.2625427842140198,
+        "per_position_p50": 0.25300103425979614,
+        "per_position_p99": 0.4938168227672577,
+        "per_position_max": 0.724814772605896
+      }
+    },
+    {
+      "name": "model.layers.7.mlp.gate_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 21.80652618408203,
+        "per_position_mean": 0.7906386256217957,
+        "per_position_p50": 0.7760764956474304,
+        "per_position_p99": 1.1392277479171753,
+        "per_position_max": 1.240431547164917
+      },
+      "cumulative_error": {
+        "l2": 78.89270782470703,
+        "per_position_mean": 2.8238213062286377,
+        "per_position_p50": 2.672389030456543,
+        "per_position_p99": 5.005186557769775,
+        "per_position_max": 5.938927173614502
+      }
+    },
+    {
+      "name": "model.layers.7.mlp.up_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 16.563949584960938,
+        "per_position_mean": 0.6026836633682251,
+        "per_position_p50": 0.6001672744750977,
+        "per_position_p99": 0.788653552532196,
+        "per_position_max": 0.8544459939002991
+      },
+      "cumulative_error": {
+        "l2": 69.38058471679688,
+        "per_position_mean": 2.4817492961883545,
+        "per_position_p50": 2.360179901123047,
+        "per_position_p99": 4.382023334503174,
+        "per_position_max": 5.22390604019165
+      }
+    },
+    {
+      "name": "model.layers.7.mlp.down_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 30791658.0,
+      "isolated_error": {
+        "l2": 2.6013052463531494,
+        "per_position_mean": 0.09399998188018799,
+        "per_position_p50": 0.09239315241575241,
+        "per_position_p99": 0.14134202897548676,
+        "per_position_max": 0.15686027705669403
+      },
+      "cumulative_error": {
+        "l2": 15.09536075592041,
+        "per_position_mean": 0.5354676842689514,
+        "per_position_p50": 0.5040906071662903,
+        "per_position_p99": 0.9942457675933838,
+        "per_position_max": 1.148522973060608
+      }
+    },
+    {
+      "name": "model.layers.8.self_attn.q_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 12.608925819396973,
+        "per_position_mean": 0.452090859413147,
+        "per_position_p50": 0.4347301125526428,
+        "per_position_p99": 0.7962595224380493,
+        "per_position_max": 1.0432109832763672
+      },
+      "cumulative_error": {
+        "l2": 48.391990661621094,
+        "per_position_mean": 1.6784425973892212,
+        "per_position_p50": 1.5565108060836792,
+        "per_position_p99": 3.6227049827575684,
+        "per_position_max": 5.919140338897705
+      }
+    },
+    {
+      "name": "model.layers.8.self_attn.k_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 13.106072425842285,
+        "per_position_mean": 0.4643692076206207,
+        "per_position_p50": 0.4586857557296753,
+        "per_position_p99": 0.7447726130485535,
+        "per_position_max": 0.7797279953956604
+      },
+      "cumulative_error": {
+        "l2": 21.023513793945312,
+        "per_position_mean": 0.7545809149742126,
+        "per_position_p50": 0.7369592785835266,
+        "per_position_p99": 1.2176964282989502,
+        "per_position_max": 1.638932704925537
+      }
+    },
+    {
+      "name": "model.layers.8.self_attn.v_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 2.645709753036499,
+        "per_position_mean": 0.09594802558422089,
+        "per_position_p50": 0.09512774646282196,
+        "per_position_p99": 0.13183113932609558,
+        "per_position_max": 0.14870253205299377
+      },
+      "cumulative_error": {
+        "l2": 9.911209106445312,
+        "per_position_mean": 0.35462066531181335,
+        "per_position_p50": 0.3410186767578125,
+        "per_position_p99": 0.604712724685669,
+        "per_position_max": 0.7658810019493103
+      }
+    },
+    {
+      "name": "model.layers.8.self_attn.o_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 2.3153018951416016,
+        "per_position_mean": 0.08397041261196136,
+        "per_position_p50": 0.08448931574821472,
+        "per_position_p99": 0.11194067448377609,
+        "per_position_max": 0.121852345764637
+      },
+      "cumulative_error": {
+        "l2": 8.970447540283203,
+        "per_position_mean": 0.32383567094802856,
+        "per_position_p50": 0.3186570107936859,
+        "per_position_p99": 0.49876633286476135,
+        "per_position_max": 0.535796582698822
+      }
+    },
+    {
+      "name": "model.layers.8.mlp.gate_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 20.345046997070312,
+        "per_position_mean": 0.7378460764884949,
+        "per_position_p50": 0.7228894829750061,
+        "per_position_p99": 1.08638596534729,
+        "per_position_max": 1.2851781845092773
+      },
+      "cumulative_error": {
+        "l2": 75.38264465332031,
+        "per_position_mean": 2.7152886390686035,
+        "per_position_p50": 2.623800754547119,
+        "per_position_p99": 4.3452277183532715,
+        "per_position_max": 5.514054298400879
+      }
+    },
+    {
+      "name": "model.layers.8.mlp.up_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 15.050246238708496,
+        "per_position_mean": 0.5477725267410278,
+        "per_position_p50": 0.5425360202789307,
+        "per_position_p99": 0.7465806007385254,
+        "per_position_max": 0.8737840056419373
+      },
+      "cumulative_error": {
+        "l2": 63.449951171875,
+        "per_position_mean": 2.285266637802124,
+        "per_position_p50": 2.198917865753174,
+        "per_position_p99": 3.671640157699585,
+        "per_position_max": 4.333515644073486
+      }
+    },
+    {
+      "name": "model.layers.8.mlp.down_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 30791658.0,
+      "isolated_error": {
+        "l2": 2.2337450981140137,
+        "per_position_mean": 0.08064163476228714,
+        "per_position_p50": 0.07884607464075089,
+        "per_position_p99": 0.1292809247970581,
+        "per_position_max": 0.17464731633663177
+      },
+      "cumulative_error": {
+        "l2": 13.500739097595215,
+        "per_position_mean": 0.4830588400363922,
+        "per_position_p50": 0.4586308002471924,
+        "per_position_p99": 0.8315315246582031,
+        "per_position_max": 0.9176512956619263
+      }
+    },
+    {
+      "name": "model.layers.9.self_attn.q_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 14.289837837219238,
+        "per_position_mean": 0.5187472105026245,
+        "per_position_p50": 0.5136622190475464,
+        "per_position_p99": 0.7172472476959229,
+        "per_position_max": 0.7720356583595276
+      },
+      "cumulative_error": {
+        "l2": 47.29198455810547,
+        "per_position_mean": 1.7043298482894897,
+        "per_position_p50": 1.6547549962997437,
+        "per_position_p99": 2.565490484237671,
+        "per_position_max": 3.103086233139038
+      }
+    },
+    {
+      "name": "model.layers.9.self_attn.k_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 8.120635032653809,
+        "per_position_mean": 0.2925955355167389,
+        "per_position_p50": 0.2921931743621826,
+        "per_position_p99": 0.41953229904174805,
+        "per_position_max": 0.5186911225318909
+      },
+      "cumulative_error": {
+        "l2": 27.37700843811035,
+        "per_position_mean": 0.9815967679023743,
+        "per_position_p50": 0.9724977016448975,
+        "per_position_p99": 1.582219123840332,
+        "per_position_max": 1.8232064247131348
+      }
+    },
+    {
+      "name": "model.layers.9.self_attn.v_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 2.888613224029541,
+        "per_position_mean": 0.10488595068454742,
+        "per_position_p50": 0.10420961678028107,
+        "per_position_p99": 0.1432601809501648,
+        "per_position_max": 0.16130483150482178
+      },
+      "cumulative_error": {
+        "l2": 12.558990478515625,
+        "per_position_mean": 0.4515199065208435,
+        "per_position_p50": 0.441832572221756,
+        "per_position_p99": 0.7153084874153137,
+        "per_position_max": 0.753246009349823
+      }
+    },
+    {
+      "name": "model.layers.9.self_attn.o_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 1.7212190628051758,
+        "per_position_mean": 0.060796093195676804,
+        "per_position_p50": 0.06023039296269417,
+        "per_position_p99": 0.10318790376186371,
+        "per_position_max": 0.11336420476436615
+      },
+      "cumulative_error": {
+        "l2": 8.48690128326416,
+        "per_position_mean": 0.27923280000686646,
+        "per_position_p50": 0.24859698116779327,
+        "per_position_p99": 0.9028475880622864,
+        "per_position_max": 1.3545418977737427
+      }
+    },
+    {
+      "name": "model.layers.9.mlp.gate_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 18.983503341674805,
+        "per_position_mean": 0.688259482383728,
+        "per_position_p50": 0.6722326874732971,
+        "per_position_p99": 0.9918493628501892,
+        "per_position_max": 1.1198850870132446
+      },
+      "cumulative_error": {
+        "l2": 76.66148376464844,
+        "per_position_mean": 2.747011661529541,
+        "per_position_p50": 2.612100601196289,
+        "per_position_p99": 4.729843616485596,
+        "per_position_max": 7.051469802856445
+      }
+    },
+    {
+      "name": "model.layers.9.mlp.up_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 14.974297523498535,
+        "per_position_mean": 0.5448919534683228,
+        "per_position_p50": 0.5380215644836426,
+        "per_position_p99": 0.7536265254020691,
+        "per_position_max": 0.8858001828193665
+      },
+      "cumulative_error": {
+        "l2": 69.74382019042969,
+        "per_position_mean": 2.5001254081726074,
+        "per_position_p50": 2.3858346939086914,
+        "per_position_p99": 4.115626811981201,
+        "per_position_max": 6.301799297332764
+      }
+    },
+    {
+      "name": "model.layers.9.mlp.down_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 30791658.0,
+      "isolated_error": {
+        "l2": 2.2163007259368896,
+        "per_position_mean": 0.07998494803905487,
+        "per_position_p50": 0.07770244032144547,
+        "per_position_p99": 0.13065925240516663,
+        "per_position_max": 0.18683066964149475
+      },
+      "cumulative_error": {
+        "l2": 14.198195457458496,
+        "per_position_mean": 0.5035533308982849,
+        "per_position_p50": 0.4781760573387146,
+        "per_position_p99": 0.9781520366668701,
+        "per_position_max": 1.347733974456787
+      }
+    },
+    {
+      "name": "model.layers.10.self_attn.q_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 10.378571510314941,
+        "per_position_mean": 0.37651917338371277,
+        "per_position_p50": 0.3694550693035126,
+        "per_position_p99": 0.530340850353241,
+        "per_position_max": 0.6249327063560486
+      },
+      "cumulative_error": {
+        "l2": 42.241920471191406,
+        "per_position_mean": 1.504508137702942,
+        "per_position_p50": 1.4402226209640503,
+        "per_position_p99": 2.8657052516937256,
+        "per_position_max": 4.105459690093994
+      }
+    },
+    {
+      "name": "model.layers.10.self_attn.k_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 4.981782913208008,
+        "per_position_mean": 0.17980429530143738,
+        "per_position_p50": 0.17573389410972595,
+        "per_position_p99": 0.2607215344905853,
+        "per_position_max": 0.3263712525367737
+      },
+      "cumulative_error": {
+        "l2": 18.616914749145508,
+        "per_position_mean": 0.6618325114250183,
+        "per_position_p50": 0.630089282989502,
+        "per_position_p99": 1.1675848960876465,
+        "per_position_max": 1.8888664245605469
+      }
+    },
+    {
+      "name": "model.layers.10.self_attn.v_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 2.958501100540161,
+        "per_position_mean": 0.10725200176239014,
+        "per_position_p50": 0.10584969818592072,
+        "per_position_p99": 0.15398567914962769,
+        "per_position_max": 0.18681244552135468
+      },
+      "cumulative_error": {
+        "l2": 16.93561553955078,
+        "per_position_mean": 0.6013950109481812,
+        "per_position_p50": 0.5728108286857605,
+        "per_position_p99": 1.0905464887619019,
+        "per_position_max": 1.5613739490509033
+      }
+    },
+    {
+      "name": "model.layers.10.self_attn.o_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 2.153683662414551,
+        "per_position_mean": 0.07782561331987381,
+        "per_position_p50": 0.07708123326301575,
+        "per_position_p99": 0.11453241109848022,
+        "per_position_max": 0.12682116031646729
+      },
+      "cumulative_error": {
+        "l2": 9.458746910095215,
+        "per_position_mean": 0.33762460947036743,
+        "per_position_p50": 0.3256816267967224,
+        "per_position_p99": 0.571953535079956,
+        "per_position_max": 0.7305513620376587
+      }
+    },
+    {
+      "name": "model.layers.10.mlp.gate_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 18.571971893310547,
+        "per_position_mean": 0.6731910705566406,
+        "per_position_p50": 0.658537745475769,
+        "per_position_p99": 0.9778593182563782,
+        "per_position_max": 1.3260068893432617
+      },
+      "cumulative_error": {
+        "l2": 76.18923950195312,
+        "per_position_mean": 2.7438747882843018,
+        "per_position_p50": 2.64077091217041,
+        "per_position_p99": 4.350062847137451,
+        "per_position_max": 5.624966621398926
+      }
+    },
+    {
+      "name": "model.layers.10.mlp.up_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 13.945962905883789,
+        "per_position_mean": 0.5083392858505249,
+        "per_position_p50": 0.5022851824760437,
+        "per_position_p99": 0.688004195690155,
+        "per_position_max": 0.7754092216491699
+      },
+      "cumulative_error": {
+        "l2": 64.95082092285156,
+        "per_position_mean": 2.339362859725952,
+        "per_position_p50": 2.2452073097229004,
+        "per_position_p99": 3.728534460067749,
+        "per_position_max": 4.543148994445801
+      }
+    },
+    {
+      "name": "model.layers.10.mlp.down_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 30791658.0,
+      "isolated_error": {
+        "l2": 1.9911974668502808,
+        "per_position_mean": 0.07209774106740952,
+        "per_position_p50": 0.07031379640102386,
+        "per_position_p99": 0.11462365835905075,
+        "per_position_max": 0.131267249584198
+      },
+      "cumulative_error": {
+        "l2": 12.841263771057129,
+        "per_position_mean": 0.45951053500175476,
+        "per_position_p50": 0.43878939747810364,
+        "per_position_p99": 0.7885915637016296,
+        "per_position_max": 0.9186772108078003
+      }
+    },
+    {
+      "name": "model.layers.11.self_attn.q_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 14.173317909240723,
+        "per_position_mean": 0.5149590969085693,
+        "per_position_p50": 0.5118433237075806,
+        "per_position_p99": 0.6712459921836853,
+        "per_position_max": 0.7215300798416138
+      },
+      "cumulative_error": {
+        "l2": 55.05200958251953,
+        "per_position_mean": 1.9736745357513428,
+        "per_position_p50": 1.9079102277755737,
+        "per_position_p99": 3.400733470916748,
+        "per_position_max": 4.27075719833374
+      }
+    },
+    {
+      "name": "model.layers.11.self_attn.k_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 8.298209190368652,
+        "per_position_mean": 0.29909244179725647,
+        "per_position_p50": 0.2946713864803314,
+        "per_position_p99": 0.4344215989112854,
+        "per_position_max": 0.512197732925415
+      },
+      "cumulative_error": {
+        "l2": 30.842519760131836,
+        "per_position_mean": 1.109001636505127,
+        "per_position_p50": 1.0812820196151733,
+        "per_position_p99": 1.732696294784546,
+        "per_position_max": 1.9320602416992188
+      }
+    },
+    {
+      "name": "model.layers.11.self_attn.v_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 3.13869571685791,
+        "per_position_mean": 0.11403186619281769,
+        "per_position_p50": 0.11277411878108978,
+        "per_position_p99": 0.15450508892536163,
+        "per_position_max": 0.17031769454479218
+      },
+      "cumulative_error": {
+        "l2": 14.150867462158203,
+        "per_position_mean": 0.5065652132034302,
+        "per_position_p50": 0.48656466603279114,
+        "per_position_p99": 0.8671228289604187,
+        "per_position_max": 1.0783463716506958
+      }
+    },
+    {
+      "name": "model.layers.11.self_attn.o_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 1.7137956619262695,
+        "per_position_mean": 0.059837255626916885,
+        "per_position_p50": 0.055248141288757324,
+        "per_position_p99": 0.11637789011001587,
+        "per_position_max": 0.14845867455005646
+      },
+      "cumulative_error": {
+        "l2": 8.534931182861328,
+        "per_position_mean": 0.28600677847862244,
+        "per_position_p50": 0.24947862327098846,
+        "per_position_p99": 0.6822414398193359,
+        "per_position_max": 1.145188808441162
+      }
+    },
+    {
+      "name": "model.layers.11.mlp.gate_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 17.148847579956055,
+        "per_position_mean": 0.6237573623657227,
+        "per_position_p50": 0.6119244694709778,
+        "per_position_p99": 0.8362918496131897,
+        "per_position_max": 1.0071606636047363
+      },
+      "cumulative_error": {
+        "l2": 74.81649780273438,
+        "per_position_mean": 2.690523624420166,
+        "per_position_p50": 2.5895750522613525,
+        "per_position_p99": 4.388000965118408,
+        "per_position_max": 5.115725040435791
+      }
+    },
+    {
+      "name": "model.layers.11.mlp.up_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 14.635713577270508,
+        "per_position_mean": 0.533632755279541,
+        "per_position_p50": 0.5301262140274048,
+        "per_position_p99": 0.6962544918060303,
+        "per_position_max": 0.8006598949432373
+      },
+      "cumulative_error": {
+        "l2": 72.38036346435547,
+        "per_position_mean": 2.601837635040283,
+        "per_position_p50": 2.5018813610076904,
+        "per_position_p99": 4.208067417144775,
+        "per_position_max": 5.1010637283325195
+      }
+    },
+    {
+      "name": "model.layers.11.mlp.down_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 30791658.0,
+      "isolated_error": {
+        "l2": 2.3924543857574463,
+        "per_position_mean": 0.08672624081373215,
+        "per_position_p50": 0.0853884294629097,
+        "per_position_p99": 0.12674158811569214,
+        "per_position_max": 0.148053839802742
+      },
+      "cumulative_error": {
+        "l2": 15.333978652954102,
+        "per_position_mean": 0.5466577410697937,
+        "per_position_p50": 0.5203746557235718,
+        "per_position_p99": 0.9606560468673706,
+        "per_position_max": 1.4053276777267456
+      }
+    },
+    {
+      "name": "model.layers.12.self_attn.q_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 10.54503345489502,
+        "per_position_mean": 0.3824196755886078,
+        "per_position_p50": 0.372567355632782,
+        "per_position_p99": 0.5377160310745239,
+        "per_position_max": 0.6527953147888184
+      },
+      "cumulative_error": {
+        "l2": 44.85826110839844,
+        "per_position_mean": 1.6089998483657837,
+        "per_position_p50": 1.5575100183486938,
+        "per_position_p99": 2.732609272003174,
+        "per_position_max": 3.3805410861968994
+      }
+    },
+    {
+      "name": "model.layers.12.self_attn.k_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 4.854525089263916,
+        "per_position_mean": 0.1753970980644226,
+        "per_position_p50": 0.17124143242835999,
+        "per_position_p99": 0.25761958956718445,
+        "per_position_max": 0.3198373019695282
+      },
+      "cumulative_error": {
+        "l2": 19.325393676757812,
+        "per_position_mean": 0.6906905770301819,
+        "per_position_p50": 0.6602240204811096,
+        "per_position_p99": 1.1649447679519653,
+        "per_position_max": 1.637400507926941
+      }
+    },
+    {
+      "name": "model.layers.12.self_attn.v_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 2.857635498046875,
+        "per_position_mean": 0.10376882553100586,
+        "per_position_p50": 0.10261940956115723,
+        "per_position_p99": 0.14580020308494568,
+        "per_position_max": 0.16493108868598938
+      },
+      "cumulative_error": {
+        "l2": 19.643707275390625,
+        "per_position_mean": 0.6982921957969666,
+        "per_position_p50": 0.6660844683647156,
+        "per_position_p99": 1.2455694675445557,
+        "per_position_max": 1.9386464357376099
+      }
+    },
+    {
+      "name": "model.layers.12.self_attn.o_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 2.274042844772339,
+        "per_position_mean": 0.08238817751407623,
+        "per_position_p50": 0.08194728195667267,
+        "per_position_p99": 0.11700119823217392,
+        "per_position_max": 0.12588562071323395
+      },
+      "cumulative_error": {
+        "l2": 10.301506996154785,
+        "per_position_mean": 0.3695032000541687,
+        "per_position_p50": 0.3621484339237213,
+        "per_position_p99": 0.5902126431465149,
+        "per_position_max": 0.890339195728302
+      }
+    },
+    {
+      "name": "model.layers.12.mlp.gate_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 17.33503532409668,
+        "per_position_mean": 0.6295662522315979,
+        "per_position_p50": 0.6165626049041748,
+        "per_position_p99": 0.8953596949577332,
+        "per_position_max": 1.0643471479415894
+      },
+      "cumulative_error": {
+        "l2": 73.2370834350586,
+        "per_position_mean": 2.6372969150543213,
+        "per_position_p50": 2.5333425998687744,
+        "per_position_p99": 4.189505577087402,
+        "per_position_max": 5.482220649719238
+      }
+    },
+    {
+      "name": "model.layers.12.mlp.up_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 14.552218437194824,
+        "per_position_mean": 0.5308477878570557,
+        "per_position_p50": 0.5276356339454651,
+        "per_position_p99": 0.693098783493042,
+        "per_position_max": 0.7507663369178772
+      },
+      "cumulative_error": {
+        "l2": 69.36763000488281,
+        "per_position_mean": 2.499051094055176,
+        "per_position_p50": 2.42057728767395,
+        "per_position_p99": 3.9339704513549805,
+        "per_position_max": 4.781026840209961
+      }
+    },
+    {
+      "name": "model.layers.12.mlp.down_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 30791658.0,
+      "isolated_error": {
+        "l2": 2.2000198364257812,
+        "per_position_mean": 0.07987286895513535,
+        "per_position_p50": 0.0786033496260643,
+        "per_position_p99": 0.11263412237167358,
+        "per_position_max": 0.1337939202785492
+      },
+      "cumulative_error": {
+        "l2": 13.800314903259277,
+        "per_position_mean": 0.4939826428890228,
+        "per_position_p50": 0.47416171431541443,
+        "per_position_p99": 0.8466188311576843,
+        "per_position_max": 1.0142849683761597
+      }
+    },
+    {
+      "name": "model.layers.13.self_attn.q_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 12.425000190734863,
+        "per_position_mean": 0.4514572322368622,
+        "per_position_p50": 0.44893643260002136,
+        "per_position_p99": 0.5983090400695801,
+        "per_position_max": 0.6672335863113403
+      },
+      "cumulative_error": {
+        "l2": 53.239418029785156,
+        "per_position_mean": 1.9041130542755127,
+        "per_position_p50": 1.8307932615280151,
+        "per_position_p99": 3.1654932498931885,
+        "per_position_max": 3.9633989334106445
+      }
+    },
+    {
+      "name": "model.layers.13.self_attn.k_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 6.201951026916504,
+        "per_position_mean": 0.22438010573387146,
+        "per_position_p50": 0.22435779869556427,
+        "per_position_p99": 0.3176765739917755,
+        "per_position_max": 0.34614887833595276
+      },
+      "cumulative_error": {
+        "l2": 22.201454162597656,
+        "per_position_mean": 0.7972174882888794,
+        "per_position_p50": 0.7760634422302246,
+        "per_position_p99": 1.2576946020126343,
+        "per_position_max": 1.5716303586959839
+      }
+    },
+    {
+      "name": "model.layers.13.self_attn.v_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 2.966656446456909,
+        "per_position_mean": 0.10789548605680466,
+        "per_position_p50": 0.10734172910451889,
+        "per_position_p99": 0.14269131422042847,
+        "per_position_max": 0.15838411450386047
+      },
+      "cumulative_error": {
+        "l2": 16.148286819458008,
+        "per_position_mean": 0.5750633478164673,
+        "per_position_p50": 0.5533355474472046,
+        "per_position_p99": 0.9805197715759277,
+        "per_position_max": 1.3330810070037842
+      }
+    },
+    {
+      "name": "model.layers.13.self_attn.o_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 1.9912272691726685,
+        "per_position_mean": 0.0707000270485878,
+        "per_position_p50": 0.068463034927845,
+        "per_position_p99": 0.11825181543827057,
+        "per_position_max": 0.14845652878284454
+      },
+      "cumulative_error": {
+        "l2": 9.11721420288086,
+        "per_position_mean": 0.31850844621658325,
+        "per_position_p50": 0.29823747277259827,
+        "per_position_p99": 0.6259247064590454,
+        "per_position_max": 0.9290822148323059
+      }
+    },
+    {
+      "name": "model.layers.13.mlp.gate_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 17.63327980041504,
+        "per_position_mean": 0.6403684616088867,
+        "per_position_p50": 0.6267695426940918,
+        "per_position_p99": 0.9177871942520142,
+        "per_position_max": 1.0481411218643188
+      },
+      "cumulative_error": {
+        "l2": 72.6347885131836,
+        "per_position_mean": 2.6084208488464355,
+        "per_position_p50": 2.514099359512329,
+        "per_position_p99": 4.233345985412598,
+        "per_position_max": 5.989018440246582
+      }
+    },
+    {
+      "name": "model.layers.13.mlp.up_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 15.378153800964355,
+        "per_position_mean": 0.5609009861946106,
+        "per_position_p50": 0.5575202107429504,
+        "per_position_p99": 0.7067351937294006,
+        "per_position_max": 0.8414885401725769
+      },
+      "cumulative_error": {
+        "l2": 72.98574829101562,
+        "per_position_mean": 2.6211416721343994,
+        "per_position_p50": 2.5309035778045654,
+        "per_position_p99": 4.30781888961792,
+        "per_position_max": 5.509388446807861
+      }
+    },
+    {
+      "name": "model.layers.13.mlp.down_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 30791658.0,
+      "isolated_error": {
+        "l2": 2.4659383296966553,
+        "per_position_mean": 0.08941011875867844,
+        "per_position_p50": 0.08708982169628143,
+        "per_position_p99": 0.12795571982860565,
+        "per_position_max": 0.1456274390220642
+      },
+      "cumulative_error": {
+        "l2": 15.179251670837402,
+        "per_position_mean": 0.5413215756416321,
+        "per_position_p50": 0.5175572633743286,
+        "per_position_p99": 0.9895812273025513,
+        "per_position_max": 1.2428975105285645
+      }
+    },
+    {
+      "name": "model.layers.14.self_attn.q_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 11.14578628540039,
+        "per_position_mean": 0.4043668210506439,
+        "per_position_p50": 0.39726027846336365,
+        "per_position_p99": 0.5703341364860535,
+        "per_position_max": 0.7782444953918457
+      },
+      "cumulative_error": {
+        "l2": 49.87975311279297,
+        "per_position_mean": 1.7798734903335571,
+        "per_position_p50": 1.7070040702819824,
+        "per_position_p99": 3.111525535583496,
+        "per_position_max": 4.310853958129883
+      }
+    },
+    {
+      "name": "model.layers.14.self_attn.k_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 5.398353576660156,
+        "per_position_mean": 0.1949579268693924,
+        "per_position_p50": 0.19215279817581177,
+        "per_position_p99": 0.28584983944892883,
+        "per_position_max": 0.3207060396671295
+      },
+      "cumulative_error": {
+        "l2": 20.8067626953125,
+        "per_position_mean": 0.7401803135871887,
+        "per_position_p50": 0.7094455361366272,
+        "per_position_p99": 1.278903841972351,
+        "per_position_max": 1.882005214691162
+      }
+    },
+    {
+      "name": "model.layers.14.self_attn.v_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 3.668797492980957,
+        "per_position_mean": 0.1333715319633484,
+        "per_position_p50": 0.13299646973609924,
+        "per_position_p99": 0.1757337599992752,
+        "per_position_max": 0.1862962543964386
+      },
+      "cumulative_error": {
+        "l2": 19.211265563964844,
+        "per_position_mean": 0.6842921376228333,
+        "per_position_p50": 0.6564217209815979,
+        "per_position_p99": 1.2145599126815796,
+        "per_position_max": 1.609757661819458
+      }
+    },
+    {
+      "name": "model.layers.14.self_attn.o_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 3.135833501815796,
+        "per_position_mean": 0.11287999153137207,
+        "per_position_p50": 0.11259563267230988,
+        "per_position_p99": 0.1625685691833496,
+        "per_position_max": 0.202534019947052
+      },
+      "cumulative_error": {
+        "l2": 13.046409606933594,
+        "per_position_mean": 0.46120622754096985,
+        "per_position_p50": 0.438655287027359,
+        "per_position_p99": 0.8541646599769592,
+        "per_position_max": 1.1415448188781738
+      }
+    },
+    {
+      "name": "model.layers.14.mlp.gate_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 19.368127822875977,
+        "per_position_mean": 0.7022851705551147,
+        "per_position_p50": 0.6843634843826294,
+        "per_position_p99": 1.0211900472640991,
+        "per_position_max": 1.1050859689712524
+      },
+      "cumulative_error": {
+        "l2": 73.89591217041016,
+        "per_position_mean": 2.645946979522705,
+        "per_position_p50": 2.5100932121276855,
+        "per_position_p99": 4.6205925941467285,
+        "per_position_max": 6.583006381988525
+      }
+    },
+    {
+      "name": "model.layers.14.mlp.up_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 15.767521858215332,
+        "per_position_mean": 0.5750736594200134,
+        "per_position_p50": 0.5751701593399048,
+        "per_position_p99": 0.7139390110969543,
+        "per_position_max": 0.790404736995697
+      },
+      "cumulative_error": {
+        "l2": 69.66922760009766,
+        "per_position_mean": 2.4946377277374268,
+        "per_position_p50": 2.3557145595550537,
+        "per_position_p99": 4.42031192779541,
+        "per_position_max": 5.780159950256348
+      }
+    },
+    {
+      "name": "model.layers.14.mlp.down_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 30791658.0,
+      "isolated_error": {
+        "l2": 2.6830904483795166,
+        "per_position_mean": 0.09723921120166779,
+        "per_position_p50": 0.094838947057724,
+        "per_position_p99": 0.14637744426727295,
+        "per_position_max": 0.17542558908462524
+      },
+      "cumulative_error": {
+        "l2": 15.482488632202148,
+        "per_position_mean": 0.550059974193573,
+        "per_position_p50": 0.5167151689529419,
+        "per_position_p99": 0.9967710971832275,
+        "per_position_max": 1.2455195188522339
+      }
+    },
+    {
+      "name": "model.layers.15.self_attn.q_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 11.355171203613281,
+        "per_position_mean": 0.412136435508728,
+        "per_position_p50": 0.40630969405174255,
+        "per_position_p99": 0.5641207695007324,
+        "per_position_max": 0.6744237542152405
+      },
+      "cumulative_error": {
+        "l2": 48.72538375854492,
+        "per_position_mean": 1.7385395765304565,
+        "per_position_p50": 1.660903811454773,
+        "per_position_p99": 3.0370702743530273,
+        "per_position_max": 4.13067626953125
+      }
+    },
+    {
+      "name": "model.layers.15.self_attn.k_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 5.407812595367432,
+        "per_position_mean": 0.19587935507297516,
+        "per_position_p50": 0.19572630524635315,
+        "per_position_p99": 0.2666900157928467,
+        "per_position_max": 0.3550310432910919
+      },
+      "cumulative_error": {
+        "l2": 21.665388107299805,
+        "per_position_mean": 0.7686620354652405,
+        "per_position_p50": 0.7427983283996582,
+        "per_position_p99": 1.4394185543060303,
+        "per_position_max": 1.756729245185852
+      }
+    },
+    {
+      "name": "model.layers.15.self_attn.v_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 3.4518685340881348,
+        "per_position_mean": 0.1255590319633484,
+        "per_position_p50": 0.1251208484172821,
+        "per_position_p99": 0.1654699295759201,
+        "per_position_max": 0.1812077909708023
+      },
+      "cumulative_error": {
+        "l2": 15.295570373535156,
+        "per_position_mean": 0.5447290539741516,
+        "per_position_p50": 0.5185350179672241,
+        "per_position_p99": 0.9610240459442139,
+        "per_position_max": 1.113241195678711
+      }
+    },
+    {
+      "name": "model.layers.15.self_attn.o_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 2.59737229347229,
+        "per_position_mean": 0.09317072480916977,
+        "per_position_p50": 0.09234973043203354,
+        "per_position_p99": 0.14629541337490082,
+        "per_position_max": 0.16930429637432098
+      },
+      "cumulative_error": {
+        "l2": 10.149264335632324,
+        "per_position_mean": 0.3585474491119385,
+        "per_position_p50": 0.33845341205596924,
+        "per_position_p99": 0.6933804154396057,
+        "per_position_max": 0.9360212087631226
+      }
+    },
+    {
+      "name": "model.layers.15.mlp.gate_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 21.6507625579834,
+        "per_position_mean": 0.7829825282096863,
+        "per_position_p50": 0.7580665349960327,
+        "per_position_p99": 1.2063767910003662,
+        "per_position_max": 1.3729032278060913
+      },
+      "cumulative_error": {
+        "l2": 79.03584289550781,
+        "per_position_mean": 2.825941562652588,
+        "per_position_p50": 2.671100616455078,
+        "per_position_p99": 4.919408321380615,
+        "per_position_max": 7.360249042510986
+      }
+    },
+    {
+      "name": "model.layers.15.mlp.up_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 17.4968318939209,
+        "per_position_mean": 0.6383193135261536,
+        "per_position_p50": 0.6378769874572754,
+        "per_position_p99": 0.7938663363456726,
+        "per_position_max": 0.8783532381057739
+      },
+      "cumulative_error": {
+        "l2": 76.0590591430664,
+        "per_position_mean": 2.7201802730560303,
+        "per_position_p50": 2.572767972946167,
+        "per_position_p99": 4.790231704711914,
+        "per_position_max": 6.4469733238220215
+      }
+    },
+    {
+      "name": "model.layers.15.mlp.down_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 30791658.0,
+      "isolated_error": {
+        "l2": 3.1886990070343018,
+        "per_position_mean": 0.11568952351808548,
+        "per_position_p50": 0.11320336163043976,
+        "per_position_p99": 0.1688113510608673,
+        "per_position_max": 0.2196739912033081
+      },
+      "cumulative_error": {
+        "l2": 18.671703338623047,
+        "per_position_mean": 0.6653710603713989,
+        "per_position_p50": 0.6283999681472778,
+        "per_position_p99": 1.2509765625,
+        "per_position_max": 1.4411516189575195
+      }
+    },
+    {
+      "name": "model.layers.16.self_attn.q_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 12.601558685302734,
+        "per_position_mean": 0.4576507806777954,
+        "per_position_p50": 0.4511891305446625,
+        "per_position_p99": 0.6233165860176086,
+        "per_position_max": 0.6874971985816956
+      },
+      "cumulative_error": {
+        "l2": 51.54743576049805,
+        "per_position_mean": 1.82522714138031,
+        "per_position_p50": 1.7162702083587646,
+        "per_position_p99": 3.4762961864471436,
+        "per_position_max": 4.578934669494629
+      }
+    },
+    {
+      "name": "model.layers.16.self_attn.k_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 8.112529754638672,
+        "per_position_mean": 0.29119420051574707,
+        "per_position_p50": 0.2827990651130676,
+        "per_position_p99": 0.4728340208530426,
+        "per_position_max": 0.5058695673942566
+      },
+      "cumulative_error": {
+        "l2": 27.050546646118164,
+        "per_position_mean": 0.9592682719230652,
+        "per_position_p50": 0.9201608300209045,
+        "per_position_p99": 1.779984712600708,
+        "per_position_max": 2.4017493724823
+      }
+    },
+    {
+      "name": "model.layers.16.self_attn.v_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 4.729856014251709,
+        "per_position_mean": 0.16990160942077637,
+        "per_position_p50": 0.16975241899490356,
+        "per_position_p99": 0.2541727125644684,
+        "per_position_max": 0.2802223265171051
+      },
+      "cumulative_error": {
+        "l2": 12.613576889038086,
+        "per_position_mean": 0.45133480429649353,
+        "per_position_p50": 0.4346238374710083,
+        "per_position_p99": 0.7559025287628174,
+        "per_position_max": 1.1132313013076782
+      }
+    },
+    {
+      "name": "model.layers.16.self_attn.o_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 1.737987995147705,
+        "per_position_mean": 0.05642691254615784,
+        "per_position_p50": 0.04995211958885193,
+        "per_position_p99": 0.13257430493831635,
+        "per_position_max": 0.1779918521642685
+      },
+      "cumulative_error": {
+        "l2": 10.324152946472168,
+        "per_position_mean": 0.3233356475830078,
+        "per_position_p50": 0.2749080955982208,
+        "per_position_p99": 0.9901244044303894,
+        "per_position_max": 1.6145603656768799
+      }
+    },
+    {
+      "name": "model.layers.16.mlp.gate_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 25.063968658447266,
+        "per_position_mean": 0.9064815044403076,
+        "per_position_p50": 0.8840944170951843,
+        "per_position_p99": 1.3838728666305542,
+        "per_position_max": 1.8296571969985962
+      },
+      "cumulative_error": {
+        "l2": 85.81808471679688,
+        "per_position_mean": 3.0519912242889404,
+        "per_position_p50": 2.861931562423706,
+        "per_position_p99": 5.586267948150635,
+        "per_position_max": 8.619839668273926
+      }
+    },
+    {
+      "name": "model.layers.16.mlp.up_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 18.840198516845703,
+        "per_position_mean": 0.686801016330719,
+        "per_position_p50": 0.6880667805671692,
+        "per_position_p99": 0.857297420501709,
+        "per_position_max": 0.9371402263641357
+      },
+      "cumulative_error": {
+        "l2": 74.40946960449219,
+        "per_position_mean": 2.645720958709717,
+        "per_position_p50": 2.4730982780456543,
+        "per_position_p99": 4.960996627807617,
+        "per_position_max": 6.868049144744873
+      }
+    },
+    {
+      "name": "model.layers.16.mlp.down_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 30791658.0,
+      "isolated_error": {
+        "l2": 4.058421611785889,
+        "per_position_mean": 0.14642900228500366,
+        "per_position_p50": 0.14376388490200043,
+        "per_position_p99": 0.21746231615543365,
+        "per_position_max": 0.25558432936668396
+      },
+      "cumulative_error": {
+        "l2": 21.04399871826172,
+        "per_position_mean": 0.7405586838722229,
+        "per_position_p50": 0.685285747051239,
+        "per_position_p99": 1.5220035314559937,
+        "per_position_max": 1.9479624032974243
+      }
+    },
+    {
+      "name": "model.layers.17.self_attn.q_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 12.374855995178223,
+        "per_position_mean": 0.448751300573349,
+        "per_position_p50": 0.44444480538368225,
+        "per_position_p99": 0.6302531361579895,
+        "per_position_max": 0.7364603281021118
+      },
+      "cumulative_error": {
+        "l2": 44.9937744140625,
+        "per_position_mean": 1.5914843082427979,
+        "per_position_p50": 1.4947162866592407,
+        "per_position_p99": 3.01499342918396,
+        "per_position_max": 4.79036808013916
+      }
+    },
+    {
+      "name": "model.layers.17.self_attn.k_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 5.496925354003906,
+        "per_position_mean": 0.19839386641979218,
+        "per_position_p50": 0.1947866529226303,
+        "per_position_p99": 0.30160486698150635,
+        "per_position_max": 0.3254038989543915
+      },
+      "cumulative_error": {
+        "l2": 17.385671615600586,
+        "per_position_mean": 0.6143920421600342,
+        "per_position_p50": 0.5819401144981384,
+        "per_position_p99": 1.1525702476501465,
+        "per_position_max": 1.6396700143814087
+      }
+    },
+    {
+      "name": "model.layers.17.self_attn.v_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 4.050203323364258,
+        "per_position_mean": 0.146456778049469,
+        "per_position_p50": 0.14470019936561584,
+        "per_position_p99": 0.209206223487854,
+        "per_position_max": 0.22791650891304016
+      },
+      "cumulative_error": {
+        "l2": 13.581488609313965,
+        "per_position_mean": 0.48247507214546204,
+        "per_position_p50": 0.4572366178035736,
+        "per_position_p99": 0.9144996404647827,
+        "per_position_max": 1.2138947248458862
+      }
+    },
+    {
+      "name": "model.layers.17.self_attn.o_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 2.2189791202545166,
+        "per_position_mean": 0.07833059877157211,
+        "per_position_p50": 0.07561042904853821,
+        "per_position_p99": 0.13765782117843628,
+        "per_position_max": 0.1643347591161728
+      },
+      "cumulative_error": {
+        "l2": 8.879196166992188,
+        "per_position_mean": 0.3027096390724182,
+        "per_position_p50": 0.2808258831501007,
+        "per_position_p99": 0.6515339612960815,
+        "per_position_max": 1.453168511390686
+      }
+    },
+    {
+      "name": "model.layers.17.mlp.gate_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 30.502117156982422,
+        "per_position_mean": 1.103581190109253,
+        "per_position_p50": 1.0750274658203125,
+        "per_position_p99": 1.6442595720291138,
+        "per_position_max": 1.8062071800231934
+      },
+      "cumulative_error": {
+        "l2": 98.24555969238281,
+        "per_position_mean": 3.463858127593994,
+        "per_position_p50": 3.2081263065338135,
+        "per_position_p99": 6.564266681671143,
+        "per_position_max": 12.291000366210938
+      }
+    },
+    {
+      "name": "model.layers.17.mlp.up_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 21.345352172851562,
+        "per_position_mean": 0.7771592736244202,
+        "per_position_p50": 0.7740398049354553,
+        "per_position_p99": 0.995000958442688,
+        "per_position_max": 1.0614564418792725
+      },
+      "cumulative_error": {
+        "l2": 78.74300384521484,
+        "per_position_mean": 2.782456159591675,
+        "per_position_p50": 2.5800728797912598,
+        "per_position_p99": 5.373007774353027,
+        "per_position_max": 7.816659450531006
+      }
+    },
+    {
+      "name": "model.layers.17.mlp.down_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 30791658.0,
+      "isolated_error": {
+        "l2": 3.8750345706939697,
+        "per_position_mean": 0.13854026794433594,
+        "per_position_p50": 0.13261786103248596,
+        "per_position_p99": 0.240154430270195,
+        "per_position_max": 0.27774778008461
+      },
+      "cumulative_error": {
+        "l2": 19.864397048950195,
+        "per_position_mean": 0.6824870109558105,
+        "per_position_p50": 0.6116291284561157,
+        "per_position_p99": 1.5542409420013428,
+        "per_position_max": 2.403688430786133
+      }
+    },
+    {
+      "name": "model.layers.18.self_attn.q_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 12.204160690307617,
+        "per_position_mean": 0.4418652057647705,
+        "per_position_p50": 0.4334883987903595,
+        "per_position_p99": 0.6440823674201965,
+        "per_position_max": 0.7069946527481079
+      },
+      "cumulative_error": {
+        "l2": 45.32423782348633,
+        "per_position_mean": 1.5939708948135376,
+        "per_position_p50": 1.4811967611312866,
+        "per_position_p99": 2.978827953338623,
+        "per_position_max": 6.656414985656738
+      }
+    },
+    {
+      "name": "model.layers.18.self_attn.k_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 5.7731852531433105,
+        "per_position_mean": 0.20849460363388062,
+        "per_position_p50": 0.20523177087306976,
+        "per_position_p99": 0.30738893151283264,
+        "per_position_max": 0.3407600224018097
+      },
+      "cumulative_error": {
+        "l2": 19.102060317993164,
+        "per_position_mean": 0.6692084670066833,
+        "per_position_p50": 0.621969997882843,
+        "per_position_p99": 1.3863732814788818,
+        "per_position_max": 2.1847755908966064
+      }
+    },
+    {
+      "name": "model.layers.18.self_attn.v_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 3.9830281734466553,
+        "per_position_mean": 0.14435666799545288,
+        "per_position_p50": 0.1441321074962616,
+        "per_position_p99": 0.20146960020065308,
+        "per_position_max": 0.23382782936096191
+      },
+      "cumulative_error": {
+        "l2": 15.325777053833008,
+        "per_position_mean": 0.5355098843574524,
+        "per_position_p50": 0.49082431197166443,
+        "per_position_p99": 1.2041232585906982,
+        "per_position_max": 1.4331427812576294
+      }
+    },
+    {
+      "name": "model.layers.18.self_attn.o_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 2.323439836502075,
+        "per_position_mean": 0.08002245426177979,
+        "per_position_p50": 0.07842669636011124,
+        "per_position_p99": 0.15762083232402802,
+        "per_position_max": 0.19288164377212524
+      },
+      "cumulative_error": {
+        "l2": 10.327866554260254,
+        "per_position_mean": 0.3462400734424591,
+        "per_position_p50": 0.32588404417037964,
+        "per_position_p99": 0.834342360496521,
+        "per_position_max": 1.4760620594024658
+      }
+    },
+    {
+      "name": "model.layers.18.mlp.gate_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 27.239580154418945,
+        "per_position_mean": 0.9879921078681946,
+        "per_position_p50": 0.9798391461372375,
+        "per_position_p99": 1.370976209640503,
+        "per_position_max": 1.7727367877960205
+      },
+      "cumulative_error": {
+        "l2": 93.65618896484375,
+        "per_position_mean": 3.278080940246582,
+        "per_position_p50": 3.0274550914764404,
+        "per_position_p99": 6.645107269287109,
+        "per_position_max": 11.94047737121582
+      }
+    },
+    {
+      "name": "model.layers.18.mlp.up_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 21.99302864074707,
+        "per_position_mean": 0.7990921139717102,
+        "per_position_p50": 0.7980538606643677,
+        "per_position_p99": 1.0656588077545166,
+        "per_position_max": 1.1310877799987793
+      },
+      "cumulative_error": {
+        "l2": 83.06272888183594,
+        "per_position_mean": 2.9097273349761963,
+        "per_position_p50": 2.6592252254486084,
+        "per_position_p99": 6.12736177444458,
+        "per_position_max": 10.168122291564941
+      }
+    },
+    {
+      "name": "model.layers.18.mlp.down_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 30791658.0,
+      "isolated_error": {
+        "l2": 4.214842796325684,
+        "per_position_mean": 0.1490880250930786,
+        "per_position_p50": 0.14104048907756805,
+        "per_position_p99": 0.30723896622657776,
+        "per_position_max": 0.35758525133132935
+      },
+      "cumulative_error": {
+        "l2": 22.391420364379883,
+        "per_position_mean": 0.7545412182807922,
+        "per_position_p50": 0.6650419235229492,
+        "per_position_p99": 2.0191519260406494,
+        "per_position_max": 2.532883405685425
+      }
+    },
+    {
+      "name": "model.layers.19.self_attn.q_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 12.415356636047363,
+        "per_position_mean": 0.44993463158607483,
+        "per_position_p50": 0.44565439224243164,
+        "per_position_p99": 0.651674211025238,
+        "per_position_max": 0.7243921160697937
+      },
+      "cumulative_error": {
+        "l2": 44.52766036987305,
+        "per_position_mean": 1.5611971616744995,
+        "per_position_p50": 1.4522697925567627,
+        "per_position_p99": 3.018254041671753,
+        "per_position_max": 7.141040802001953
+      }
+    },
+    {
+      "name": "model.layers.19.self_attn.k_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 5.792154312133789,
+        "per_position_mean": 0.20918585360050201,
+        "per_position_p50": 0.2061246633529663,
+        "per_position_p99": 0.3032313585281372,
+        "per_position_max": 0.3694559931755066
+      },
+      "cumulative_error": {
+        "l2": 18.587095260620117,
+        "per_position_mean": 0.6509770750999451,
+        "per_position_p50": 0.6140362024307251,
+        "per_position_p99": 1.3538254499435425,
+        "per_position_max": 2.5694496631622314
+      }
+    },
+    {
+      "name": "model.layers.19.self_attn.v_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 4.077486038208008,
+        "per_position_mean": 0.1481352299451828,
+        "per_position_p50": 0.14778341352939606,
+        "per_position_p99": 0.19546674191951752,
+        "per_position_max": 0.22327911853790283
+      },
+      "cumulative_error": {
+        "l2": 16.507394790649414,
+        "per_position_mean": 0.5806375741958618,
+        "per_position_p50": 0.5376113653182983,
+        "per_position_p99": 1.1426957845687866,
+        "per_position_max": 1.9592163562774658
+      }
+    },
+    {
+      "name": "model.layers.19.self_attn.o_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 3.0677011013031006,
+        "per_position_mean": 0.10997229814529419,
+        "per_position_p50": 0.10967393219470978,
+        "per_position_p99": 0.16222061216831207,
+        "per_position_max": 0.18580174446105957
+      },
+      "cumulative_error": {
+        "l2": 11.707703590393066,
+        "per_position_mean": 0.40980079770088196,
+        "per_position_p50": 0.3896709382534027,
+        "per_position_p99": 0.7396841645240784,
+        "per_position_max": 1.2532978057861328
+      }
+    },
+    {
+      "name": "model.layers.19.mlp.gate_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 31.542070388793945,
+        "per_position_mean": 1.1413707733154297,
+        "per_position_p50": 1.1211017370224,
+        "per_position_p99": 1.730615258216858,
+        "per_position_max": 1.975696325302124
+      },
+      "cumulative_error": {
+        "l2": 103.53645324707031,
+        "per_position_mean": 3.6219682693481445,
+        "per_position_p50": 3.3645455837249756,
+        "per_position_p99": 7.389652729034424,
+        "per_position_max": 12.76589298248291
+      }
+    },
+    {
+      "name": "model.layers.19.mlp.up_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 25.5241756439209,
+        "per_position_mean": 0.9277698993682861,
+        "per_position_p50": 0.9296814799308777,
+        "per_position_p99": 1.2275532484054565,
+        "per_position_max": 1.340543508529663
+      },
+      "cumulative_error": {
+        "l2": 94.82351684570312,
+        "per_position_mean": 3.3162169456481934,
+        "per_position_p50": 3.039522886276245,
+        "per_position_p99": 6.967586994171143,
+        "per_position_max": 11.440450668334961
+      }
+    },
+    {
+      "name": "model.layers.19.mlp.down_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 30791658.0,
+      "isolated_error": {
+        "l2": 5.679539203643799,
+        "per_position_mean": 0.20269115269184113,
+        "per_position_p50": 0.1918564736843109,
+        "per_position_p99": 0.3797864615917206,
+        "per_position_max": 0.4341154098510742
+      },
+      "cumulative_error": {
+        "l2": 29.316736221313477,
+        "per_position_mean": 1.0007524490356445,
+        "per_position_p50": 0.897042989730835,
+        "per_position_p99": 2.5427796840667725,
+        "per_position_max": 3.795332431793213
+      }
+    },
+    {
+      "name": "model.layers.20.self_attn.q_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 12.711158752441406,
+        "per_position_mean": 0.4596550464630127,
+        "per_position_p50": 0.45518380403518677,
+        "per_position_p99": 0.6775496006011963,
+        "per_position_max": 0.7561469674110413
+      },
+      "cumulative_error": {
+        "l2": 48.06739807128906,
+        "per_position_mean": 1.6889879703521729,
+        "per_position_p50": 1.5669686794281006,
+        "per_position_p99": 3.288033962249756,
+        "per_position_max": 6.462743759155273
+      }
+    },
+    {
+      "name": "model.layers.20.self_attn.k_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 6.280855178833008,
+        "per_position_mean": 0.22583389282226562,
+        "per_position_p50": 0.22085842490196228,
+        "per_position_p99": 0.3541472852230072,
+        "per_position_max": 0.3932424485683441
+      },
+      "cumulative_error": {
+        "l2": 19.90371322631836,
+        "per_position_mean": 0.6999744772911072,
+        "per_position_p50": 0.6697478294372559,
+        "per_position_p99": 1.3421920537948608,
+        "per_position_max": 1.660222053527832
+      }
+    },
+    {
+      "name": "model.layers.20.self_attn.v_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 6.855985164642334,
+        "per_position_mean": 0.23632092773914337,
+        "per_position_p50": 0.22471968829631805,
+        "per_position_p99": 0.4790247976779938,
+        "per_position_max": 0.5486761331558228
+      },
+      "cumulative_error": {
+        "l2": 20.50859832763672,
+        "per_position_mean": 0.7131201028823853,
+        "per_position_p50": 0.6745083928108215,
+        "per_position_p99": 1.4503401517868042,
+        "per_position_max": 2.277391195297241
+      }
+    },
+    {
+      "name": "model.layers.20.self_attn.o_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 3.1901001930236816,
+        "per_position_mean": 0.11315791308879852,
+        "per_position_p50": 0.11334148794412613,
+        "per_position_p99": 0.19332042336463928,
+        "per_position_max": 0.21246719360351562
+      },
+      "cumulative_error": {
+        "l2": 15.58970832824707,
+        "per_position_mean": 0.5308067202568054,
+        "per_position_p50": 0.49123698472976685,
+        "per_position_p99": 1.2100918292999268,
+        "per_position_max": 1.5289372205734253
+      }
+    },
+    {
+      "name": "model.layers.20.mlp.gate_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 32.876834869384766,
+        "per_position_mean": 1.1914877891540527,
+        "per_position_p50": 1.1716125011444092,
+        "per_position_p99": 1.7133939266204834,
+        "per_position_max": 1.9488725662231445
+      },
+      "cumulative_error": {
+        "l2": 104.82551574707031,
+        "per_position_mean": 3.6586010456085205,
+        "per_position_p50": 3.3746938705444336,
+        "per_position_p99": 7.452290058135986,
+        "per_position_max": 14.20580005645752
+      }
+    },
+    {
+      "name": "model.layers.20.mlp.up_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 28.328256607055664,
+        "per_position_mean": 1.0291944742202759,
+        "per_position_p50": 1.0229465961456299,
+        "per_position_p99": 1.3868534564971924,
+        "per_position_max": 1.5279263257980347
+      },
+      "cumulative_error": {
+        "l2": 99.7085952758789,
+        "per_position_mean": 3.4802234172821045,
+        "per_position_p50": 3.1750309467315674,
+        "per_position_p99": 7.259191989898682,
+        "per_position_max": 12.093795776367188
+      }
+    },
+    {
+      "name": "model.layers.20.mlp.down_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 30791658.0,
+      "isolated_error": {
+        "l2": 7.399097919464111,
+        "per_position_mean": 0.263601154088974,
+        "per_position_p50": 0.24769319593906403,
+        "per_position_p99": 0.4771702289581299,
+        "per_position_max": 0.5710400938987732
+      },
+      "cumulative_error": {
+        "l2": 36.55805206298828,
+        "per_position_mean": 1.2505861520767212,
+        "per_position_p50": 1.115120530128479,
+        "per_position_p99": 3.0432186126708984,
+        "per_position_max": 4.361342906951904
+      }
+    },
+    {
+      "name": "model.layers.21.self_attn.q_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 12.26195240020752,
+        "per_position_mean": 0.44304001331329346,
+        "per_position_p50": 0.43603166937828064,
+        "per_position_p99": 0.649993896484375,
+        "per_position_max": 0.7510959506034851
+      },
+      "cumulative_error": {
+        "l2": 46.7564582824707,
+        "per_position_mean": 1.6406636238098145,
+        "per_position_p50": 1.5323387384414673,
+        "per_position_p99": 3.1870815753936768,
+        "per_position_max": 5.2662739753723145
+      }
+    },
+    {
+      "name": "model.layers.21.self_attn.k_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 5.910565376281738,
+        "per_position_mean": 0.21155470609664917,
+        "per_position_p50": 0.2082914263010025,
+        "per_position_p99": 0.3192410469055176,
+        "per_position_max": 0.46061983704566956
+      },
+      "cumulative_error": {
+        "l2": 18.330846786499023,
+        "per_position_mean": 0.642822802066803,
+        "per_position_p50": 0.605874240398407,
+        "per_position_p99": 1.1937023401260376,
+        "per_position_max": 1.6142210960388184
+      }
+    },
+    {
+      "name": "model.layers.21.self_attn.v_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 9.672431945800781,
+        "per_position_mean": 0.33538123965263367,
+        "per_position_p50": 0.32604536414146423,
+        "per_position_p99": 0.6449598073959351,
+        "per_position_max": 0.7073096632957458
+      },
+      "cumulative_error": {
+        "l2": 34.587406158447266,
+        "per_position_mean": 1.2012200355529785,
+        "per_position_p50": 1.137670636177063,
+        "per_position_p99": 2.632230758666992,
+        "per_position_max": 3.451569080352783
+      }
+    },
+    {
+      "name": "model.layers.21.self_attn.o_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 4.760408878326416,
+        "per_position_mean": 0.1672249138355255,
+        "per_position_p50": 0.1631689965724945,
+        "per_position_p99": 0.301693856716156,
+        "per_position_max": 0.34912410378456116
+      },
+      "cumulative_error": {
+        "l2": 22.49127769470215,
+        "per_position_mean": 0.7727161049842834,
+        "per_position_p50": 0.7476629018783569,
+        "per_position_p99": 1.761903166770935,
+        "per_position_max": 2.346282482147217
+      }
+    },
+    {
+      "name": "model.layers.21.mlp.gate_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 30.987890243530273,
+        "per_position_mean": 1.1229664087295532,
+        "per_position_p50": 1.1076180934906006,
+        "per_position_p99": 1.5669336318969727,
+        "per_position_max": 1.773856282234192
+      },
+      "cumulative_error": {
+        "l2": 104.661376953125,
+        "per_position_mean": 3.647611379623413,
+        "per_position_p50": 3.3467984199523926,
+        "per_position_p99": 7.689423561096191,
+        "per_position_max": 10.750568389892578
+      }
+    },
+    {
+      "name": "model.layers.21.mlp.up_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 28.07210350036621,
+        "per_position_mean": 1.0148611068725586,
+        "per_position_p50": 0.991100013256073,
+        "per_position_p99": 1.5346323251724243,
+        "per_position_max": 1.6287082433700562
+      },
+      "cumulative_error": {
+        "l2": 102.2751235961914,
+        "per_position_mean": 3.5585782527923584,
+        "per_position_p50": 3.233285427093506,
+        "per_position_p99": 7.669588088989258,
+        "per_position_max": 10.402421951293945
+      }
+    },
+    {
+      "name": "model.layers.21.mlp.down_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 30791658.0,
+      "isolated_error": {
+        "l2": 7.732543468475342,
+        "per_position_mean": 0.25806644558906555,
+        "per_position_p50": 0.23394453525543213,
+        "per_position_p99": 0.5878182053565979,
+        "per_position_max": 2.2883105278015137
+      },
+      "cumulative_error": {
+        "l2": 37.90611267089844,
+        "per_position_mean": 1.2474371194839478,
+        "per_position_p50": 1.0497925281524658,
+        "per_position_p99": 3.384153366088867,
+        "per_position_max": 6.225660800933838
+      }
+    },
+    {
+      "name": "model.layers.22.self_attn.q_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 11.624041557312012,
+        "per_position_mean": 0.41840142011642456,
+        "per_position_p50": 0.4104769825935364,
+        "per_position_p99": 0.6480641961097717,
+        "per_position_max": 0.7960626482963562
+      },
+      "cumulative_error": {
+        "l2": 46.55094528198242,
+        "per_position_mean": 1.5620307922363281,
+        "per_position_p50": 1.4358972311019897,
+        "per_position_p99": 3.000401258468628,
+        "per_position_max": 15.201488494873047
+      }
+    },
+    {
+      "name": "model.layers.22.self_attn.k_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 5.84246826171875,
+        "per_position_mean": 0.20773553848266602,
+        "per_position_p50": 0.20237533748149872,
+        "per_position_p99": 0.33785098791122437,
+        "per_position_max": 0.47969669103622437
+      },
+      "cumulative_error": {
+        "l2": 18.677913665771484,
+        "per_position_mean": 0.6373661756515503,
+        "per_position_p50": 0.5896219611167908,
+        "per_position_p99": 1.2397937774658203,
+        "per_position_max": 4.685567855834961
+      }
+    },
+    {
+      "name": "model.layers.22.self_attn.v_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 10.498591423034668,
+        "per_position_mean": 0.34307345747947693,
+        "per_position_p50": 0.312407910823822,
+        "per_position_p99": 0.8608316779136658,
+        "per_position_max": 0.9715586304664612
+      },
+      "cumulative_error": {
+        "l2": 31.24325942993164,
+        "per_position_mean": 1.0544652938842773,
+        "per_position_p50": 1.0141510963439941,
+        "per_position_p99": 2.456930160522461,
+        "per_position_max": 3.2607438564300537
+      }
+    },
+    {
+      "name": "model.layers.22.self_attn.o_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 3.839425563812256,
+        "per_position_mean": 0.1336219757795334,
+        "per_position_p50": 0.13143475353717804,
+        "per_position_p99": 0.24188579618930817,
+        "per_position_max": 0.33973219990730286
+      },
+      "cumulative_error": {
+        "l2": 16.7265625,
+        "per_position_mean": 0.5685426592826843,
+        "per_position_p50": 0.5470587611198425,
+        "per_position_p99": 1.156037449836731,
+        "per_position_max": 2.7481000423431396
+      }
+    },
+    {
+      "name": "model.layers.22.mlp.gate_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 28.93085289001465,
+        "per_position_mean": 1.0485442876815796,
+        "per_position_p50": 1.0268043279647827,
+        "per_position_p99": 1.474739670753479,
+        "per_position_max": 1.7699264287948608
+      },
+      "cumulative_error": {
+        "l2": 103.67201232910156,
+        "per_position_mean": 3.504762649536133,
+        "per_position_p50": 3.158820629119873,
+        "per_position_p99": 7.714156627655029,
+        "per_position_max": 28.899295806884766
+      }
+    },
+    {
+      "name": "model.layers.22.mlp.up_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 27.547576904296875,
+        "per_position_mean": 0.9985964894294739,
+        "per_position_p50": 0.9798305034637451,
+        "per_position_p99": 1.4679768085479736,
+        "per_position_max": 1.7088561058044434
+      },
+      "cumulative_error": {
+        "l2": 107.53996276855469,
+        "per_position_mean": 3.571488380432129,
+        "per_position_p50": 3.1886963844299316,
+        "per_position_p99": 8.151346206665039,
+        "per_position_max": 36.3394775390625
+      }
+    },
+    {
+      "name": "model.layers.22.mlp.down_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 30791658.0,
+      "isolated_error": {
+        "l2": 10.210051536560059,
+        "per_position_mean": 0.35907599329948425,
+        "per_position_p50": 0.3377833962440491,
+        "per_position_p99": 0.7502848505973816,
+        "per_position_max": 1.0016801357269287
+      },
+      "cumulative_error": {
+        "l2": 50.30461502075195,
+        "per_position_mean": 1.660791039466858,
+        "per_position_p50": 1.4275709390640259,
+        "per_position_p99": 4.216275215148926,
+        "per_position_max": 13.053513526916504
+      }
+    },
+    {
+      "name": "model.layers.23.self_attn.q_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 12.589162826538086,
+        "per_position_mean": 0.4550274610519409,
+        "per_position_p50": 0.4461858570575714,
+        "per_position_p99": 0.6751523017883301,
+        "per_position_max": 0.8380788564682007
+      },
+      "cumulative_error": {
+        "l2": 48.46792221069336,
+        "per_position_mean": 1.6559561491012573,
+        "per_position_p50": 1.529714584350586,
+        "per_position_p99": 3.168912410736084,
+        "per_position_max": 13.557162284851074
+      }
+    },
+    {
+      "name": "model.layers.23.self_attn.k_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 6.317176342010498,
+        "per_position_mean": 0.22614049911499023,
+        "per_position_p50": 0.22167734801769257,
+        "per_position_p99": 0.3535892963409424,
+        "per_position_max": 0.424999475479126
+      },
+      "cumulative_error": {
+        "l2": 20.193859100341797,
+        "per_position_mean": 0.6824783682823181,
+        "per_position_p50": 0.648713231086731,
+        "per_position_p99": 1.255951166152954,
+        "per_position_max": 6.466777324676514
+      }
+    },
+    {
+      "name": "model.layers.23.self_attn.v_proj",
+      "shape": [
+        1,
+        745,
+        128
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 9.287972450256348,
+        "per_position_mean": 0.32087987661361694,
+        "per_position_p50": 0.30437156558036804,
+        "per_position_p99": 0.6235072016716003,
+        "per_position_max": 0.7618027329444885
+      },
+      "cumulative_error": {
+        "l2": 31.436363220214844,
+        "per_position_mean": 1.0728144645690918,
+        "per_position_p50": 1.0265814065933228,
+        "per_position_p99": 2.134467363357544,
+        "per_position_max": 7.176136016845703
+      }
+    },
+    {
+      "name": "model.layers.23.self_attn.o_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 6.44815731048584,
+        "per_position_mean": 0.23063912987709045,
+        "per_position_p50": 0.2264709323644638,
+        "per_position_p99": 0.3791218400001526,
+        "per_position_max": 0.4483594000339508
+      },
+      "cumulative_error": {
+        "l2": 29.114728927612305,
+        "per_position_mean": 1.0163253545761108,
+        "per_position_p50": 0.9757370352745056,
+        "per_position_p99": 1.9023048877716064,
+        "per_position_max": 5.088137626647949
+      }
+    },
+    {
+      "name": "model.layers.23.mlp.gate_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 33.05998611450195,
+        "per_position_mean": 1.1967474222183228,
+        "per_position_p50": 1.1500974893569946,
+        "per_position_p99": 1.7978428602218628,
+        "per_position_max": 2.0076098442077637
+      },
+      "cumulative_error": {
+        "l2": 126.48652648925781,
+        "per_position_mean": 4.223969459533691,
+        "per_position_p50": 3.765031337738037,
+        "per_position_p99": 9.771985054016113,
+        "per_position_max": 41.3978385925293
+      }
+    },
+    {
+      "name": "model.layers.23.mlp.up_proj",
+      "shape": [
+        1,
+        745,
+        4864
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 30.987476348876953,
+        "per_position_mean": 1.1221948862075806,
+        "per_position_p50": 1.0824590921401978,
+        "per_position_p99": 1.728470802307129,
+        "per_position_max": 1.923160195350647
+      },
+      "cumulative_error": {
+        "l2": 125.8640365600586,
+        "per_position_mean": 4.145541667938232,
+        "per_position_p50": 3.638719320297241,
+        "per_position_p99": 9.872468948364258,
+        "per_position_max": 44.05970001220703
+      }
+    },
+    {
+      "name": "model.layers.23.mlp.down_proj",
+      "shape": [
+        1,
+        745,
+        896
+      ],
+      "integer_qmax": 30791658.0,
+      "isolated_error": {
+        "l2": 16.444154739379883,
+        "per_position_mean": 0.5826998949050903,
+        "per_position_p50": 0.5468104481697083,
+        "per_position_p99": 1.1426011323928833,
+        "per_position_max": 1.514200210571289
+      },
+      "cumulative_error": {
+        "l2": 77.90721130371094,
+        "per_position_mean": 2.645479440689087,
+        "per_position_p50": 2.3543825149536133,
+        "per_position_p99": 6.1631669998168945,
+        "per_position_max": 14.896918296813965
+      }
+    },
+    {
+      "name": "lm_head",
+      "shape": [
+        1,
+        745,
+        151936
+      ],
+      "integer_qmax": 71742393.0,
+      "isolated_error": {
+        "l2": 0.9832507967948914,
+        "per_position_mean": 0.03542431443929672,
+        "per_position_p50": 0.03394348919391632,
+        "per_position_p99": 0.06242303177714348,
+        "per_position_max": 0.07919801771640778
+      },
+      "cumulative_error": {
+        "l2": 2047.72509765625,
+        "per_position_mean": 69.308349609375,
+        "per_position_p50": 62.20071029663086,
+        "per_position_p99": 156.88279724121094,
+        "per_position_max": 509.83245849609375
+      }
+    }
+  ]
+}
